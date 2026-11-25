@@ -13,6 +13,8 @@ import { createQuestSystem } from "./quest-system.js";
 import { createQuestUI } from "./quest-ui.js";
 import { createShopSystem } from "./shop-system.js";
 import { createShopUI } from "./shop-ui.js";
+import { createEquipmentSystem } from "./equipment-system.js";
+import { createEquipmentUI } from "./equipment-ui.js";
 
 const app = document.getElementById("app");
 
@@ -31,8 +33,12 @@ let enemyAI = null;
 let questSystem = null;
 let playerStats = null;
 let inventory = null;
+
 let shopSystem = null;
 let shopUI = null;
+
+let equipmentSystem = null;
+let equipmentUI = null;
 
 let selectedCharacter = "Ksatria";
 
@@ -210,15 +216,9 @@ function showSettings() {
         <div class="setting-row">
           <label for="fps">Target FPS</label>
           <select id="fps">
-            <option value="30" ${settings.fps === 30 ? "selected" : ""}>
-              30 FPS
-            </option>
-            <option value="45" ${settings.fps === 45 ? "selected" : ""}>
-              45 FPS
-            </option>
-            <option value="60" ${settings.fps === 60 ? "selected" : ""}>
-              60 FPS
-            </option>
+            <option value="30" ${settings.fps === 30 ? "selected" : ""}>30 FPS</option>
+            <option value="45" ${settings.fps === 45 ? "selected" : ""}>45 FPS</option>
+            <option value="60" ${settings.fps === 60 ? "selected" : ""}>60 FPS</option>
           </select>
         </div>
 
@@ -300,9 +300,10 @@ function addGameHudStyles() {
     }
 
     #attack-button,
-    #jump-button {
+    #jump-button,
+    #equipment-button {
       min-width: 65px;
-      min-height: 48px;
+      min-height: 44px;
       border-radius: 12px;
       font-weight: bold;
       touch-action: manipulation;
@@ -407,7 +408,6 @@ function showNpcDialog(name, dialogue) {
     }
   }
 
-  // Tomas adalah NPC pedagang.
   if (name === "Tomas" && shopUI) {
     const shopButton = document.createElement("button");
     shopButton.textContent = "BUKA TOKO";
@@ -442,18 +442,12 @@ function startGame() {
           <span id="level-text">Level 1</span>
           <div id="gold-text">Gold: 100</div>
 
-          <div class="stat-label" id="hp-text">
-            HP 100/100
-          </div>
-
+          <div class="stat-label" id="hp-text">HP 100/100</div>
           <div class="stat-track">
             <div id="hp-bar" class="stat-fill hp-fill"></div>
           </div>
 
-          <div class="stat-label" id="xp-text">
-            XP 0/100
-          </div>
-
+          <div class="stat-label" id="xp-text">XP 0/100</div>
           <div class="stat-track">
             <div id="xp-bar" class="stat-fill xp-fill"></div>
           </div>
@@ -468,6 +462,7 @@ function startGame() {
         <div class="action-buttons">
           <button id="attack-button">ATTACK</button>
           <button id="jump-button">JUMP</button>
+          <button id="equipment-button">EQUIPMENT</button>
         </div>
       </div>
     </div>
@@ -531,28 +526,29 @@ function startGame() {
   player.material = playerMaterial;
   camera.lockedTarget = player;
 
-  // Buat statistik, inventori, dan quest.
+  // Sistem statistik, inventori, dan quest.
   playerStats = createPlayerStats();
   inventory = createInventory();
   questSystem = createQuestSystem(playerStats, inventory);
 
-  // Buat sistem toko.
+  // Sistem toko.
   shopSystem = createShopSystem(playerStats, inventory);
   shopUI = createShopUI(shopSystem, playerStats, inventory);
 
-  // Hubungkan penambahan item ke progress quest.
+  // Sistem perlengkapan.
+  equipmentSystem = createEquipmentSystem(inventory);
+  equipmentUI = createEquipmentUI(equipmentSystem, inventory);
+
   inventory.setOnItemAdded((name, quantity) => {
     if (questSystem) {
       questSystem.addProgress(name, quantity);
     }
   });
 
-  // Item awal pemain.
   inventory.addItem("Health Potion", 2, "Consumable");
   inventory.addItem("Wood", 5, "Material");
   inventory.addItem("Goblin Token", 1, "Quest");
 
-  // Bangun dunia dan hubungkan interaksi NPC.
   disposeWorldInteraction = buildWorld(
     scene,
     (amount) => {
@@ -587,7 +583,6 @@ function startGame() {
     jumpButton
   );
 
-  // Sistem AI musuh.
   enemyAI = createEnemyAI(
     scene,
     player,
@@ -602,7 +597,6 @@ function startGame() {
 
   const attackButton = document.getElementById("attack-button");
 
-  // Sistem pertarungan terhubung ke quest.
   disposeCombatSystem = createCombatSystem(
     scene,
     player,
@@ -612,6 +606,12 @@ function startGame() {
     enemyAI,
     questSystem
   );
+
+  document.getElementById("equipment-button").onclick = () => {
+    if (equipmentUI) {
+      equipmentUI.open();
+    }
+  };
 
   engine.runRenderLoop(() => {
     if (scene) {
@@ -661,21 +661,23 @@ function exitGame() {
     disposeWorldInteraction = null;
   }
 
-  // Tutup dan bersihkan toko.
   if (shopUI) {
     shopUI.dispose();
     shopUI = null;
   }
 
+  if (equipmentUI) {
+    equipmentUI.dispose();
+    equipmentUI = null;
+  }
+
   shopSystem = null;
+  equipmentSystem = null;
 
   window.removeEventListener("resize", resizeEngine);
 
   const dialog = document.getElementById("npc-dialog");
-
-  if (dialog) {
-    dialog.remove();
-  }
+  if (dialog) dialog.remove();
 
   if (engine) {
     engine.stopRenderLoop();
@@ -691,13 +693,10 @@ function exitGame() {
   questSystem = null;
 
   const oldStyles = document.getElementById("game-hud-styles");
-
-  if (oldStyles) {
-    oldStyles.remove();
-  }
+  if (oldStyles) oldStyles.remove();
 
   showMainMenu();
 }
 
 showLoading();
-    
+      
