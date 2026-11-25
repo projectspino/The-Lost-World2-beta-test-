@@ -414,14 +414,22 @@ function startGame() {
   playerStats = createPlayerStats();
   inventory = createInventory();
 
+  // Sistem Quest dibuat sebelum item awal dimasukkan.
+  questSystem = createQuestSystem(playerStats, inventory);
+
+  // Hubungkan item yang berhasil ditambahkan ke progress Quest.
+  inventory.setOnItemAdded((name, quantity) => {
+    if (questSystem) {
+      questSystem.addProgress(name, quantity);
+    }
+  });
+
+  // Item awal pemain.
   inventory.addItem("Health Potion", 2, "Consumable");
   inventory.addItem("Wood", 5, "Material");
   inventory.addItem("Goblin Token", 1, "Quest");
 
   disposeInventoryUI = createInventoryUI(inventory);
-
-  // Sistem Quest.
-  questSystem = createQuestSystem(playerStats, inventory);
   disposeQuestUI = createQuestUI(questSystem);
 
   const joystick = document.getElementById("joystick");
