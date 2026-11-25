@@ -23,6 +23,7 @@ let disposePlayerController = null;
 let disposeCombatSystem = null;
 let disposeInventoryUI = null;
 let disposeQuestUI = null;
+let disposeWorldInteraction = null;
 
 let enemyAI = null;
 let questSystem = null;
@@ -409,15 +410,14 @@ function startGame() {
   player.material = playerMaterial;
   camera.lockedTarget = player;
 
-  buildWorld(scene);
-
+  // Buat statistik dan inventori sebelum dunia.
   playerStats = createPlayerStats();
   inventory = createInventory();
 
-  // Sistem Quest dibuat sebelum item awal dimasukkan.
+  // Buat Quest System.
   questSystem = createQuestSystem(playerStats, inventory);
 
-  // Hubungkan item yang berhasil ditambahkan ke progress Quest.
+  // Hubungkan penambahan item ke progress Quest.
   inventory.setOnItemAdded((name, quantity) => {
     if (questSystem) {
       questSystem.addProgress(name, quantity);
@@ -428,6 +428,23 @@ function startGame() {
   inventory.addItem("Health Potion", 2, "Consumable");
   inventory.addItem("Wood", 5, "Material");
   inventory.addItem("Goblin Token", 1, "Quest");
+
+  // Bangun dunia dan hubungkan pohon ke inventori.
+  disposeWorldInteraction = buildWorld(scene, (amount) => {
+    if (!inventory) return;
+
+    const added = inventory.addItem(
+      "Wood",
+      amount,
+      "Material"
+    );
+
+    if (added) {
+      console.log("Mendapatkan " + amount + " Wood!");
+    } else {
+      console.log("Inventori penuh!");
+    }
+  });
 
   disposeInventoryUI = createInventoryUI(inventory);
   disposeQuestUI = createQuestUI(questSystem);
@@ -512,6 +529,11 @@ function exitGame() {
     disposeQuestUI = null;
   }
 
+  if (disposeWorldInteraction) {
+    disposeWorldInteraction();
+    disposeWorldInteraction = null;
+  }
+
   window.removeEventListener("resize", resizeEngine);
 
   if (engine) {
@@ -537,3 +559,4 @@ function exitGame() {
 }
 
 showLoading();
+      
