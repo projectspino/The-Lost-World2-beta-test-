@@ -588,7 +588,21 @@ function startGame() {
     player,
     (damage, enemyName) => {
       if (playerStats) {
-        playerStats.takeDamage(damage);
+        const bonuses = equipmentSystem
+          ? equipmentSystem.getBonuses()
+          : { defense: 0 };
+
+        const defense = Math.max(
+          0,
+          bonuses.defense || 0
+        );
+
+        const reducedDamage = Math.max(
+          1,
+          damage - defense
+        );
+
+        playerStats.takeDamage(reducedDamage);
       }
 
       console.log(enemyName + " menyerang pemain!");
