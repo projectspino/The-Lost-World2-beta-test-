@@ -24,6 +24,60 @@ export function createShopSystem(playerStats, inventory) {
       price: 15,
       sellPrice: 7,
       description: "Token yang ditemukan dari Goblin."
+    },
+
+    // Weapons
+    {
+      id: "iron_sword",
+      name: "Iron Sword",
+      type: "Equipment",
+      price: 100,
+      sellPrice: 50,
+      description: "Senjata dengan bonus attack."
+    },
+    {
+      id: "wooden_bow",
+      name: "Wooden Bow",
+      type: "Equipment",
+      price: 90,
+      sellPrice: 45,
+      description: "Busur untuk menyerang musuh."
+    },
+    {
+      id: "apprentice_staff",
+      name: "Apprentice Staff",
+      type: "Equipment",
+      price: 120,
+      sellPrice: 60,
+      description: "Tongkat sihir dengan bonus attack."
+    },
+
+    // Armor
+    {
+      id: "leather_armor",
+      name: "Leather Armor",
+      type: "Equipment",
+      price: 100,
+      sellPrice: 50,
+      description: "Armor dengan bonus defense."
+    },
+    {
+      id: "iron_armor",
+      name: "Iron Armor",
+      type: "Equipment",
+      price: 180,
+      sellPrice: 90,
+      description: "Armor kuat dengan bonus defense."
+    },
+
+    // Accessories
+    {
+      id: "bronze_ring",
+      name: "Bronze Ring",
+      type: "Equipment",
+      price: 150,
+      sellPrice: 75,
+      description: "Cincin dengan bonus attack dan defense."
     }
   ];
 
@@ -35,17 +89,30 @@ export function createShopSystem(playerStats, inventory) {
     const item = catalog.find(entry => entry.id === id);
 
     if (!item) {
-      return { success: false, message: "Barang tidak ditemukan." };
+      return {
+        success: false,
+        message: "Barang tidak ditemukan."
+      };
     }
 
-    if (!Number.isInteger(quantity) || quantity <= 0 || quantity > 99) {
-      return { success: false, message: "Jumlah pembelian tidak valid." };
+    if (
+      !Number.isInteger(quantity) ||
+      quantity <= 0 ||
+      quantity > 99
+    ) {
+      return {
+        success: false,
+        message: "Jumlah pembelian tidak valid."
+      };
     }
 
     const totalPrice = item.price * quantity;
 
     if (playerStats.stats.gold < totalPrice) {
-      return { success: false, message: "Gold tidak cukup." };
+      return {
+        success: false,
+        message: "Gold tidak cukup."
+      };
     }
 
     const added = inventory.addItem(
@@ -55,14 +122,21 @@ export function createShopSystem(playerStats, inventory) {
     );
 
     if (!added) {
-      return { success: false, message: "Inventory penuh." };
+      return {
+        success: false,
+        message: "Inventory penuh."
+      };
     }
 
     const paid = playerStats.spendGold(totalPrice);
 
     if (!paid) {
       inventory.removeItem(item.name, quantity);
-      return { success: false, message: "Pembayaran gagal." };
+
+      return {
+        success: false,
+        message: "Pembayaran gagal."
+      };
     }
 
     return {
@@ -73,14 +147,24 @@ export function createShopSystem(playerStats, inventory) {
   }
 
   function sellItem(name, quantity = 1) {
-    if (!Number.isInteger(quantity) || quantity <= 0 || quantity > 99) {
-      return { success: false, message: "Jumlah penjualan tidak valid." };
+    if (
+      !Number.isInteger(quantity) ||
+      quantity <= 0 ||
+      quantity > 99
+    ) {
+      return {
+        success: false,
+        message: "Jumlah penjualan tidak valid."
+      };
     }
 
     const item = catalog.find(entry => entry.name === name);
 
     if (!item) {
-      return { success: false, message: "Barang ini tidak dapat dijual." };
+      return {
+        success: false,
+        message: "Barang ini tidak dapat dijual."
+      };
     }
 
     const ownedItem = inventory.getItems().find(
@@ -88,16 +172,23 @@ export function createShopSystem(playerStats, inventory) {
     );
 
     if (!ownedItem || ownedItem.quantity < quantity) {
-      return { success: false, message: "Jumlah barang tidak cukup." };
+      return {
+        success: false,
+        message: "Jumlah barang tidak cukup."
+      };
     }
 
     const removed = inventory.removeItem(name, quantity);
 
     if (!removed) {
-      return { success: false, message: "Penjualan gagal." };
+      return {
+        success: false,
+        message: "Penjualan gagal."
+      };
     }
 
     const earnedGold = item.sellPrice * quantity;
+
     playerStats.addGold(earnedGold);
 
     return {
@@ -113,5 +204,4 @@ export function createShopSystem(playerStats, inventory) {
     buyItem,
     sellItem
   };
-    }
-        
+}
