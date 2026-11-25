@@ -20,7 +20,8 @@ let player = null;
 let disposePlayerController = null;
 let disposeCombatSystem = null;
 let disposeInventoryUI = null;
-let disposeEnemyAI = null;
+
+let enemyAI = null;
 
 let playerStats = null;
 let inventory = null;
@@ -73,9 +74,11 @@ function showLoading() {
       <div class="logo">⚔</div>
       <h1>THE LOST WORLD</h1>
       <p class="subtitle">AN EPIC FANTASY ADVENTURE</p>
+
       <div class="loading-track">
         <div class="loading-progress"></div>
       </div>
+
       <p>Preparing your adventure...</p>
     </div>
   `;
@@ -424,18 +427,8 @@ function startGame() {
     jumpButton
   );
 
-  const attackButton = document.getElementById("attack-button");
-
-  disposeCombatSystem = createCombatSystem(
-    scene,
-    player,
-    attackButton,
-    playerStats,
-    inventory
-  );
-
-  // Aktifkan Skeleton, Dire Wolf, dan Orc.
-  disposeEnemyAI = createEnemyAI(
+  // Buat AI musuh terlebih dahulu.
+  enemyAI = createEnemyAI(
     scene,
     player,
     (damage, enemyName) => {
@@ -445,6 +438,18 @@ function startGame() {
 
       console.log(enemyName + " menyerang pemain!");
     }
+  );
+
+  const attackButton = document.getElementById("attack-button");
+
+  // Hubungkan sistem pertarungan dengan semua musuh.
+  disposeCombatSystem = createCombatSystem(
+    scene,
+    player,
+    attackButton,
+    playerStats,
+    inventory,
+    enemyAI
   );
 
   engine.runRenderLoop(() => {
@@ -475,9 +480,9 @@ function exitGame() {
     disposeCombatSystem = null;
   }
 
-  if (disposeEnemyAI) {
-    disposeEnemyAI();
-    disposeEnemyAI = null;
+  if (enemyAI) {
+    enemyAI.dispose();
+    enemyAI = null;
   }
 
   if (disposeInventoryUI) {
@@ -509,4 +514,4 @@ function exitGame() {
 }
 
 showLoading();
-    
+                         
