@@ -6,6 +6,8 @@ import { buildWorld } from "./world.js";
 import { createPlayerController } from "./player-controller.js";
 import { createCombatSystem } from "./combat-system.js";
 import { createPlayerStats } from "./player-stats.js";
+import { createInventory } from "./inventory-system.js";
+import { createInventoryUI } from "./inventory-ui.js";
 
 const app = document.getElementById("app");
 
@@ -16,7 +18,10 @@ let player = null;
 
 let disposePlayerController = null;
 let disposeCombatSystem = null;
+let disposeInventoryUI = null;
+
 let playerStats = null;
+let inventory = null;
 
 let selectedCharacter = "Ksatria";
 
@@ -91,7 +96,6 @@ function showMainMenu() {
     <div class="screen main-screen">
       <div class="menu-content">
         <div class="logo">⚔</div>
-
         <h1>THE LOST WORLD</h1>
         <p class="subtitle">2.0 • BETA ADVENTURE</p>
 
@@ -213,15 +217,9 @@ function showSettings() {
         <div class="setting-row">
           <label for="fps">Target FPS</label>
           <select id="fps">
-            <option value="30" ${settings.fps === 30 ? "selected" : ""}>
-              30 FPS
-            </option>
-            <option value="45" ${settings.fps === 45 ? "selected" : ""}>
-              45 FPS
-            </option>
-            <option value="60" ${settings.fps === 60 ? "selected" : ""}>
-              60 FPS
-            </option>
+            <option value="30" ${settings.fps === 30 ? "selected" : ""}>30 FPS</option>
+            <option value="45" ${settings.fps === 45 ? "selected" : ""}>45 FPS</option>
+            <option value="60" ${settings.fps === 60 ? "selected" : ""}>60 FPS</option>
           </select>
         </div>
 
@@ -258,8 +256,11 @@ function showSettings() {
 // ==============================
 
 function addGameHudStyles() {
-  const style = document.createElement("style");
+  if (document.getElementById("game-hud-styles")) {
+    return;
+  }
 
+  const style = document.createElement("style");
   style.id = "game-hud-styles";
 
   style.textContent = `
@@ -431,13 +432,24 @@ function startGame() {
 
   camera.lockedTarget = player;
 
-  // Membuat dunia 3D
+  // Membuat dunia
   buildWorld(scene);
 
   // Membuat statistik pemain
   playerStats = createPlayerStats();
 
-  // Kontrol gerakan pemain
+  // Membuat inventaris pemain
+  inventory = createInventory();
+
+  // Item contoh untuk memeriksa tampilan inventaris
+  inventory.addItem("Health Potion", 2, "Consumable");
+  inventory.addItem("Wood", 5, "Material");
+  inventory.addItem("Goblin Token", 1, "Quest");
+
+  // Membuat tombol dan panel inventaris
+  disposeInventoryUI = createInventoryUI(inventory);
+
+  // Mengaktifkan kontrol pemain
   const joystick = document.getElementById("joystick");
   const jumpButton = document.getElementById("jump-button");
 
@@ -449,7 +461,7 @@ function startGame() {
     jumpButton
   );
 
-  // Sistem pertarungan dan hadiah XP
+  // Mengaktifkan sistem pertarungan
   const attackButton = document.getElementById("attack-button");
 
   disposeCombatSystem = createCombatSystem(
@@ -495,6 +507,11 @@ function exitGame() {
     disposeCombatSystem = null;
   }
 
+  if (disposeInventoryUI) {
+    disposeInventoryUI();
+    disposeInventoryUI = null;
+  }
+
   window.removeEventListener("resize", resizeEngine);
 
   if (engine) {
@@ -507,6 +524,7 @@ function exitGame() {
   camera = null;
   player = null;
   playerStats = null;
+  inventory = null;
 
   const oldStyles = document.getElementById("game-hud-styles");
 
@@ -522,3 +540,4 @@ function exitGame() {
 // ==============================
 
 showLoading();
+              
