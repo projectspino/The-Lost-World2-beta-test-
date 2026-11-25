@@ -6,16 +6,16 @@ export function createCombatSystem(
   player,
   attackButton,
   playerStats,
-  inventory
+  inventory,
+  enemyAI = null
 ) {
-  const enemies = [];
+  const goblins = [];
   let disposed = false;
 
   const goblinMaterial = new BABYLON.StandardMaterial(
     "goblin-material",
     scene
   );
-
   goblinMaterial.diffuseColor =
     new BABYLON.Color3(0.2, 0.55, 0.18);
 
@@ -23,11 +23,10 @@ export function createCombatSystem(
     "goblin-eye-material",
     scene
   );
-
   eyeMaterial.diffuseColor =
     new BABYLON.Color3(1, 0.8, 0.1);
 
-  // Membuat lima Goblin
+  // Membuat lima Goblin.
   for (let i = 0; i < 5; i++) {
     const goblin = BABYLON.MeshBuilder.CreateCapsule(
       "goblin-" + i,
@@ -58,109 +57,186 @@ export function createCombatSystem(
     eye.position.set(0, 0.25, -0.36);
     eye.material = eyeMaterial;
 
-    enemies.push({
+    goblins.push({
+      name: "Goblin",
       mesh: goblin,
       hp: 100,
       alive: true
     });
   }
 
-  // Hadiah dari Goblin
-  function giveGoblinLoot() {
+  function giveLoot(enemyName) {
     if (!inventory) return;
 
-    const lootTable = [
-      {
-        name: "Goblin Token",
-        type: "Quest",
-        chance: 0.8
-      },
-      {
-        name: "Wood",
-        type: "Material",
-        chance: 0.5
-      },
-      {
-        name: "Health Potion",
-        type: "Consumable",
-        chance: 0.2
-      }
-    ];
+    const lootTables = {
+      Goblin: [
+        { name: "Goblin Token", type: "Quest", chance: 0.8 },
+        { name: "Wood", type: "Material", chance: 0.5 },
+        { name: "Health Potion", type: "Consumable", chance: 0.2 }
+      ],
+      Skeleton: [
+        { name: "Bone", type: "Material", chance: 0.8 },
+        { name: "Old Coin", type: "Quest", chance: 0.3 }
+      ],
+      "Dire Wolf": [
+        { name: "Wolf Pelt", type: "Material", chance: 0.8 },
+        { name: "Wolf Fang", type: "Material", chance: 0.5 }
+      ],
+      Orc: [
+        { name: "Orc Token", type: "Quest", chance: 0.7 },
+        { name: "Iron Ore", type: "Material", chance: 0.5 },
+        { name: "Health Potion", type: "Consumable", chance: 0.3 }
+      ]
+    };
 
-    for (const item of lootTable) {
+    const loot = lootTables[enemyName] || [];
+
+    for (const item of loot) {
       if (Math.random() < item.chance) {
         inventory.addItem(item.name, 1, item.type);
       }
     }
   }
 
-  // Serangan pemain
+  function defeatEnemy(enemy) {
+    enemy.alive = false;
+
+    if (enemy.mesh && !enemy.mesh.isDisposed()) {
+      enemy.mesh.dispose();
+    }
+
+    if (playerStats) {
+      playerStats.addXP(enemy.name === "Orc" ? 40 : 25);
+    }
+
+    giveLoot(enemy.name);
+  }
+
+  function getAllTargets() {
+    const targets = [];
+
+    for (const goblin of goblins) {
+      if (goblin.alive && goblin.mesh && !goblin.mesh.isDisposed()) {
+        targets.push({
+          enemy: goblin,
+          mesh: goblin.mesh,
+          name: "Goblin",
+          health: goblin.hp,
+          source: "goblin"
+        });
+      }
+    }
+
+    if (enemyAI) {
+      const otherEnemies = enemyAI.getEnemies();
+
+      for (const enemy of otherEnemies) {
+        if (
+          enemy.alive &&
+          enemy.mesh &&
+          !enemy.mesh.isDisposed()
+        ) {
+          targets.push({
+            enemy,
+            mesh: enemy.mesh,
+            name: enemy.name,
+            health: enemy.health,
+            source: "enemyAI"
+          });
+        }
+      }
+    }
+
+    return targets;
+  }
+
   function attack() {
-    if (disposed) return;
+    if (disposed || !player) return;
 
-    for (const enemy of enemies) {
-      if (!enemy.alive) continue;
+    const targets = getAllTargets();
 
+    let nearestTarget = null;
+    let nearestDistance = 3.5;
+
+    for (const target of targets) {
       const distance = BABYLON.Vector3.Distance(
         player.position,
-        enemy.mesh.position
+        target.mesh.position
       );
 
-      if (distance <= 3.5) {
-        enemy.hp -= 25;
+      if (distance <= nearestDistance) {
+        nearestDistance = distance;
+        nearestTarget = target;
+      }
+    }
 
-        enemy.mesh.scaling.set(
-          1.15,
-          0.9,
-          1.15
-        );
+    if (!nearestTarget) return;
 
-        setTimeout(() => {
-          if (!disposed && enemy.alive) {
-            enemy.mesh.scaling.set(1, 1, 1);
-          }
-        }, 120);
+    const enemy = nearestTarget.enemy;
 
-        // Goblin dikalahkan
-        if (enemy.hp <= 0) {
-          enemy.alive = false;
-          enemy.mesh.dispose();
+    if (nearestTarget.source === "goblin") {
+      enemy.hp -= 25;
 
-          // Hadiah XP
-          if (playerStats) {
-            playerStats.addXP(25);
-          }
+      enemy.mesh.scaling.set(1.15, 0.9, 1.15);
 
-          // Hadiah item
-          giveGoblinLoot();
+      setTimeout(() => {
+        if (
+          !disposed &&
+          enemy.alive &&
+          enemy.mesh &&
+          !enemy.mesh.isDisposed()
+        ) {
+          enemy.mesh.scaling.set(1, 1, 1);
         }
+      }, 120);
 
-        break;
+      if (enemy.hp <= 0) {
+        defeatEnemy(enemy);
+      }
+    } else {
+      enemy.health -= 25;
+
+      enemy.mesh.scaling.set(1.15, 0.9, 1.15);
+
+      setTimeout(() => {
+        if (
+          !disposed &&
+          enemy.alive &&
+          enemy.mesh &&
+          !enemy.mesh.isDisposed()
+        ) {
+          enemy.mesh.scaling.setAll(
+            enemy.name === "Orc" ? 1.25 :
+            enemy.name === "Dire Wolf" ? 0.8 : 0.9
+          );
+        }
+      }, 120);
+
+      if (enemy.health <= 0) {
+        defeatEnemy(enemy);
       }
     }
   }
 
   attackButton.addEventListener("click", attack);
 
-  // Membersihkan sistem pertarungan
   return function disposeCombatSystem() {
+    if (disposed) return;
+
     disposed = true;
 
-    attackButton.removeEventListener(
-      "click",
-      attack
-    );
+    attackButton.removeEventListener("click", attack);
 
-    for (const enemy of enemies) {
+    for (const goblin of goblins) {
       if (
-        enemy.mesh &&
-        !enemy.mesh.isDisposed()
+        goblin.mesh &&
+        !goblin.mesh.isDisposed()
       ) {
-        enemy.mesh.dispose();
+        goblin.mesh.dispose();
       }
     }
 
-    enemies.length = 0;
+    goblins.length = 0;
   };
-      }
-        
+    }
+          
