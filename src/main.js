@@ -420,7 +420,7 @@ function startGame() {
 
   disposeInventoryUI = createInventoryUI(inventory);
 
-  // Inisialisasi sistem Quest.
+  // Sistem Quest.
   questSystem = createQuestSystem(playerStats, inventory);
   disposeQuestUI = createQuestUI(questSystem);
 
@@ -435,6 +435,7 @@ function startGame() {
     jumpButton
   );
 
+  // Sistem AI musuh.
   enemyAI = createEnemyAI(
     scene,
     player,
@@ -449,13 +450,15 @@ function startGame() {
 
   const attackButton = document.getElementById("attack-button");
 
+  // Pertarungan terhubung ke Quest.
   disposeCombatSystem = createCombatSystem(
     scene,
     player,
     attackButton,
     playerStats,
     inventory,
-    enemyAI
+    enemyAI,
+    questSystem
   );
 
   engine.runRenderLoop(() => {
