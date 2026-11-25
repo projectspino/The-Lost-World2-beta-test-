@@ -3,6 +3,11 @@ const MAX_INVENTORY_SLOTS = 20;
 
 export function createInventory() {
   const items = [];
+  let onItemAdded = null;
+
+  function setOnItemAdded(callback) {
+    onItemAdded = typeof callback === "function" ? callback : null;
+  }
 
   function addItem(name, quantity = 1, type = "Material") {
     if (!name || quantity <= 0) {
@@ -15,6 +20,11 @@ export function createInventory() {
 
     if (existingItem) {
       existingItem.quantity += quantity;
+
+      if (onItemAdded) {
+        onItemAdded(name, quantity);
+      }
+
       return true;
     }
 
@@ -28,6 +38,10 @@ export function createInventory() {
       quantity,
       type
     });
+
+    if (onItemAdded) {
+      onItemAdded(name, quantity);
+    }
 
     return true;
   }
@@ -72,6 +86,7 @@ export function createInventory() {
     getItems,
     getItemCount,
     hasItem,
-    clearInventory
+    clearInventory,
+    setOnItemAdded
   };
 }
