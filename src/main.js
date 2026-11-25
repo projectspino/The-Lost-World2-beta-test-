@@ -2,6 +2,7 @@
 import * as BABYLON from "@babylonjs/core";
 import "./styles/menu.css";
 import { buildWorld } from "./world.js";
+import { createPlayerController } from "./player-controller.js";
 
 const app = document.getElementById("app");
 
@@ -9,6 +10,7 @@ let engine = null;
 let scene = null;
 let camera = null;
 let player = null;
+let disposePlayerController = null;
 
 let selectedCharacter = "Ksatria";
 
@@ -71,7 +73,9 @@ function showMainMenu() {
 
 function showCharacterSelect() {
   const cards = characters.map(character => `
-    <button class="character" data-character="${character.name}">
+    <button class="character ${
+      character.name === selectedCharacter ? "selected" : ""
+    }" data-character="${character.name}">
       <span class="character-icon">${character.icon}</span>
       <strong>${character.name}</strong>
       <small>${character.description}</small>
@@ -249,8 +253,20 @@ function startGame() {
 
   camera.lockedTarget = player;
 
-  // Membuat dunia fantasi
+  // Membuat lingkungan dunia fantasi
   buildWorld(scene);
+
+  // Mengaktifkan kontrol karakter
+  const joystick = document.getElementById("joystick");
+  const jumpButton = document.getElementById("jump-button");
+
+  disposePlayerController = createPlayerController(
+    scene,
+    camera,
+    player,
+    joystick,
+    jumpButton
+  );
 
   engine.runRenderLoop(() => {
     if (scene) {
@@ -260,54 +276,7 @@ function startGame() {
 
   window.addEventListener("resize", resizeEngine);
 
-  setupControls();
-
   document.getElementById("exit-game").onclick = exitGame;
-}
-
-function setupControls() {
-  const joystick = document.getElementById("joystick");
-  let moving = false;
-
-  joystick.addEventListener("touchstart", event => {
-    moving = true;
-    event.preventDefault();
-  }, { passive: false });
-
-  joystick.addEventListener("touchend", () => {
-    moving = false;
-  });
-
-  joystick.addEventListener("touchcancel", () => {
-    moving = false;
-  });
-
-  joystick.addEventListener("touchmove", event => {
-    if (!moving || !player) return;
-
-    const touch = event.touches[0];
-    const rect = joystick.getBoundingClientRect();
-
-    const dx = (touch.clientX - (rect.left + rect.width / 2)) / 35;
-    const dz = (touch.clientY - (rect.top + rect.height / 2)) / 35;
-
-    player.position.x += dx * 0.04;
-    player.position.z += dz * 0.04;
-
-    event.preventDefault();
-  }, { passive: false });
-
-  document.getElementById("jump-button").onclick = () => {
-    if (!player) return;
-
-    player.position.y = 2.2;
-
-    setTimeout(() => {
-      if (player) {
-        player.position.y = 1;
-      }
-    }, 350);
-  };
 }
 
 function resizeEngine() {
@@ -317,12 +286,17 @@ function resizeEngine() {
 }
 
 function exitGame() {
+  if (disposePlayerController) {
+    disposePlayerController();
+    disposePlayerController = null;
+  }
+
+  window.removeEventListener("resize", resizeEngine);
+
   if (engine) {
     engine.stopRenderLoop();
     engine.dispose();
   }
-
-  window.removeEventListener("resize", resizeEngine);
 
   engine = null;
   scene = null;
@@ -333,3 +307,4 @@ function exitGame() {
 }
 
 showLoading();
+      
