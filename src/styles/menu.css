@@ -1,0 +1,217 @@
+
+/* THE LOST WORLD 2.0 - CINEMATIC MENU */
+
+:root {
+  --gold: #d9b36c;
+  --gold-light: #f1d49a;
+  --dark: #101713;
+  --panel: rgba(17, 30, 23, 0.94);
+  --text: #f5ead4;
+}
+
+body {
+  background: var(--dark);
+  color: var(--text);
+  overflow-x: hidden;
+}
+
+.screen {
+  position: relative;
+  isolation: isolate;
+  overflow: hidden;
+  background:
+    linear-gradient(
+      180deg,
+      rgba(8, 15, 12, 0.25),
+      rgba(8, 15, 12, 0.92)
+    ),
+    radial-gradient(
+      ellipse at 50% 35%,
+      #62754d 0%,
+      #293d2c 40%,
+      #101713 85%
+    );
+}
+
+.screen::before {
+  content: "";
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(
+      circle at 20% 25%,
+      rgba(224, 190, 119, 0.14),
+      transparent 30%
+    ),
+    radial-gradient(
+      circle at 80% 65%,
+      rgba(96, 143, 103, 0.16),
+      transparent 35%
+    );
+  animation: atmosphere 8s ease-in-out infinite alternate;
+}
+
+.logo {
+  color: var(--gold-light);
+  text-shadow:
+    0 3px 4px #000,
+    0 0 25px rgba(217, 179, 108, 0.35);
+  animation: logoReveal 1.5s ease both;
+}
+
+.subtitle {
+  color: var(--gold);
+  text-shadow: 0 2px 5px #000;
+}
+
+.menu {
+  animation: menuReveal 1s 0.3s ease both;
+}
+
+.game-button {
+  position: relative;
+  overflow: hidden;
+  border: 1px solid var(--gold);
+  background: linear-gradient(
+    110deg,
+    #4b351c,
+    #94703d,
+    #604322
+  );
+  box-shadow: 0 4px 15px #0005;
+  transition:
+    transform 0.2s ease,
+    box-shadow 0.2s ease,
+    filter 0.2s ease;
+}
+
+.game-button:hover {
+  filter: brightness(1.2);
+  box-shadow: 0 5px 22px #d9b36c33;
+  transform: translateY(-2px);
+}
+
+.game-button.secondary {
+  background: linear-gradient(
+    110deg,
+    #17251c,
+    #263b2b
+  );
+}
+
+.panel {
+  border: 1px solid var(--gold);
+  background: var(--panel);
+  backdrop-filter: blur(12px);
+  animation: panelReveal 0.5s ease both;
+}
+
+.panel h2 {
+  color: var(--gold-light);
+  text-shadow: 0 2px 8px #000;
+}
+
+.character {
+  transition:
+    transform 0.2s ease,
+    background 0.2s ease,
+    border 0.2s ease;
+}
+
+.character:hover {
+  transform: translateY(-4px);
+  background: #354b37;
+}
+
+.character.selected {
+  border-color: var(--gold-light);
+  box-shadow: 0 0 15px #d9b36c44;
+}
+
+.character-icon {
+  filter: drop-shadow(0 3px 4px #0008);
+}
+
+.setting-row select {
+  border-color: var(--gold);
+}
+
+#loading-screen {
+  animation: loadingFade 0.7s ease;
+}
+
+.loading-track {
+  overflow: hidden;
+  border-radius: 20px;
+  background: #ffffff30;
+}
+
+.loading-progress {
+  background: linear-gradient(
+    90deg,
+    #98703b,
+    #f0d18a,
+    #98703b
+  );
+  box-shadow: 0 0 12px #e8c77b;
+}
+
+@keyframes logoReveal {
+  from {
+    opacity: 0;
+    transform: translateY(25px) scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+}
+
+@keyframes menuReveal {
+  from {
+    opacity: 0;
+    transform: translateY(18px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+@keyframes panelReveal {
+  from {
+    opacity: 0;
+    transform: scale(0.97);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes atmosphere {
+  from {
+    opacity: 0.55;
+    transform: scale(1);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1.08);
+  }
+}
+
+@keyframes loadingFade {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    transition-duration: 0.01ms !important;
+  }
+  }
