@@ -1,7 +1,7 @@
 
 import * as BABYLON from "@babylonjs/core";
 
-export function buildWorld(scene) {
+export function buildWorld(scene, onWoodCollected = () => {}) {
   const material = (name, color) => {
     const mat = new BABYLON.StandardMaterial(name, scene);
     mat.diffuseColor = BABYLON.Color3.FromHexString(color);
@@ -61,10 +61,11 @@ export function buildWorld(scene) {
       11,
       70 + (i % 2) * 9
     );
+
     hill.material = mountain;
   }
 
-  // Pepohonan
+  // Pepohonan yang bisa dikumpulkan
   for (let i = 0; i < 55; i++) {
     const x = Math.sin(i * 12.3) * 65;
     const z = Math.cos(i * 8.7) * 65;
@@ -76,6 +77,7 @@ export function buildWorld(scene) {
       { height: 3, diameter: 0.65 },
       scene
     );
+
     trunk.position.set(x, 1.5, z);
     trunk.material = wood;
 
@@ -84,9 +86,67 @@ export function buildWorld(scene) {
       { diameter: 4, segments: 6 },
       scene
     );
+
     crown.position.set(x, 4, z);
     crown.material = leaves;
+
+    // Gabungkan bagian pohon sebagai satu objek koleksi.
+    const tree = BABYLON.Mesh.MergeMeshes(
+      [trunk, crown],
+      true,
+      true,
+      undefined,
+      false,
+      true
+    );
+
+    if (tree) {
+      tree.name = "collectable-tree-" + i;
+      tree.position.set(x, 0, z);
+      tree.isPickable = true;
+      tree.metadata = {
+        collectable: true,
+        collected: false,
+        woodAmount: 2
+      };
+    }
   }
+
+  // Interaksi mengambil Wood
+  const pointerObserver = scene.onPointerObservable.add((pointerInfo) => {
+    if (
+      pointerInfo.type !== BABYLON.PointerEventTypes.POINTERDOWN
+    ) {
+      return;
+    }
+
+    const pick = scene.pick(
+      scene.pointerX,
+      scene.pointerY
+    );
+
+    if (!pick || !pick.hit || !pick.pickedMesh) {
+      return;
+    }
+
+    const tree = pick.pickedMesh;
+
+    if (
+      !tree.metadata ||
+      !tree.metadata.collectable ||
+      tree.metadata.collected
+    ) {
+      return;
+    }
+
+    tree.metadata.collected = true;
+
+    const amount = tree.metadata.woodAmount;
+
+    onWoodCollected(amount);
+
+    tree.dispose();
+  });
 
   // Rumah desa
   for (let i = 0; i < 6; i++) {
@@ -98,6 +158,7 @@ export function buildWorld(scene) {
       { width: 7, height: 5, depth: 7 },
       scene
     );
+
     house.position.set(x, 2.5, z);
     house.material = wood;
 
@@ -111,6 +172,7 @@ export function buildWorld(scene) {
       },
       scene
     );
+
     roofMesh.position.set(x, 6.5, z);
     roofMesh.rotation.y = Math.PI / 4;
     roofMesh.material = roof;
@@ -133,6 +195,7 @@ export function buildWorld(scene) {
       2 + (i % 3) / 2,
       -35 + i * 5
     );
+
     ruin.rotation.y = i * 0.4;
     ruin.material = stone;
   }
@@ -141,7 +204,10 @@ export function buildWorld(scene) {
   for (let i = 0; i < 24; i++) {
     const rock = BABYLON.MeshBuilder.CreateSphere(
       "rock-" + i,
-      { diameter: 1.5 + (i % 3), segments: 5 },
+      {
+        diameter: 1.5 + (i % 3),
+        segments: 5
+      },
       scene
     );
 
@@ -150,6 +216,12 @@ export function buildWorld(scene) {
       0.6,
       Math.cos(i * 3) * 60
     );
+
     rock.material = stone;
   }
-  }
+
+  // Fungsi pembersihan interaksi pohon.
+  return function disposeWorldInteraction() {
+    scene.onPointerObservable.remove(pointerObserver);
+  };
+}
