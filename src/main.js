@@ -1,13 +1,15 @@
 
 import * as BABYLON from "@babylonjs/core";
 import "./styles/menu.css";
+import { buildWorld } from "./world.js";
 
 const app = document.getElementById("app");
 
-let engine;
-let scene;
-let camera;
-let player;
+let engine = null;
+let scene = null;
+let camera = null;
+let player = null;
+
 let selectedCharacter = "Ksatria";
 
 const characters = [
@@ -51,8 +53,12 @@ function showMainMenu() {
         <p class="subtitle">2.0 • BETA ADVENTURE</p>
 
         <div class="menu">
-          <button class="game-button" id="play-button">NEW ADVENTURE</button>
-          <button class="game-button secondary" id="settings-button">SETTINGS</button>
+          <button class="game-button" id="play-button">
+            NEW ADVENTURE
+          </button>
+          <button class="game-button secondary" id="settings-button">
+            SETTINGS
+          </button>
           <p class="version">Fantasy Open World RPG</p>
         </div>
       </div>
@@ -77,9 +83,16 @@ function showCharacterSelect() {
       <div class="panel">
         <h1>CHOOSE YOUR HERO</h1>
         <p class="subtitle">Select your adventure class</p>
+
         <div class="character-list">${cards}</div>
-        <button class="game-button" id="start-button">START ADVENTURE</button>
-        <button class="game-button secondary" id="back-button">BACK</button>
+
+        <button class="game-button" id="start-button">
+          START ADVENTURE
+        </button>
+
+        <button class="game-button secondary" id="back-button">
+          BACK
+        </button>
       </div>
     </div>
   `;
@@ -87,9 +100,11 @@ function showCharacterSelect() {
   document.querySelectorAll(".character").forEach(button => {
     button.onclick = () => {
       selectedCharacter = button.dataset.character;
+
       document.querySelectorAll(".character").forEach(item => {
         item.classList.remove("selected");
       });
+
       button.classList.add("selected");
     };
   });
@@ -116,12 +131,14 @@ function showSettings() {
 
         <div class="setting-row">
           <label for="shadows">Shadows</label>
-          <input type="checkbox" id="shadows" ${settings.shadows ? "checked" : ""}>
+          <input type="checkbox" id="shadows"
+            ${settings.shadows ? "checked" : ""}>
         </div>
 
         <div class="setting-row">
           <label for="particles">Particle Effects</label>
-          <input type="checkbox" id="particles" ${settings.particles ? "checked" : ""}>
+          <input type="checkbox" id="particles"
+            ${settings.particles ? "checked" : ""}>
         </div>
 
         <div class="setting-row">
@@ -133,8 +150,13 @@ function showSettings() {
           </select>
         </div>
 
-        <button class="game-button" id="save-settings">SAVE SETTINGS</button>
-        <button class="game-button secondary" id="back-button">BACK</button>
+        <button class="game-button" id="save-settings">
+          SAVE SETTINGS
+        </button>
+
+        <button class="game-button secondary" id="back-button">
+          BACK
+        </button>
       </div>
     </div>
   `;
@@ -160,6 +182,7 @@ function startGame() {
   app.innerHTML = `
     <div id="game-container">
       <canvas id="game-canvas"></canvas>
+
       <div class="game-hud">
         <div class="hero-info">
           <strong>${selectedCharacter}</strong>
@@ -167,6 +190,7 @@ function startGame() {
         </div>
         <button id="exit-game">MENU</button>
       </div>
+
       <div class="game-controls">
         <div class="joystick" id="joystick">✥</div>
         <button id="jump-button">JUMP</button>
@@ -190,6 +214,7 @@ function startGame() {
     new BABYLON.Vector3(0, 1, 0),
     scene
   );
+
   light.intensity = 0.9;
 
   camera = new BABYLON.ArcRotateCamera(
@@ -206,34 +231,31 @@ function startGame() {
   camera.upperRadiusLimit = 14;
   camera.wheelPrecision = 60;
 
-  const ground = BABYLON.MeshBuilder.CreateGround(
-    "ground",
-    { width: 120, height: 120 },
-    scene
-  );
-
-  const groundMaterial = new BABYLON.StandardMaterial("ground-material", scene);
-  groundMaterial.diffuseColor = new BABYLON.Color3(0.19, 0.36, 0.19);
-  ground.material = groundMaterial;
-
   player = BABYLON.MeshBuilder.CreateCapsule(
     "player",
     { height: 2, radius: 0.45 },
     scene
   );
+
   player.position.y = 1;
 
-  const playerMaterial = new BABYLON.StandardMaterial("player-material", scene);
+  const playerMaterial = new BABYLON.StandardMaterial(
+    "player-material",
+    scene
+  );
+
   playerMaterial.diffuseColor = new BABYLON.Color3(0.65, 0.72, 0.82);
   player.material = playerMaterial;
 
   camera.lockedTarget = player;
 
-  createCastle(scene);
-  createTrees(scene);
+  // Membuat dunia fantasi
+  buildWorld(scene);
 
   engine.runRenderLoop(() => {
-    if (scene) scene.render();
+    if (scene) {
+      scene.render();
+    }
   });
 
   window.addEventListener("resize", resizeEngine);
@@ -241,58 +263,6 @@ function startGame() {
   setupControls();
 
   document.getElementById("exit-game").onclick = exitGame;
-}
-
-function createCastle(scene) {
-  const castleMaterial = new BABYLON.StandardMaterial("castle-material", scene);
-  castleMaterial.diffuseColor = new BABYLON.Color3(0.48, 0.48, 0.45);
-
-  const castle = BABYLON.MeshBuilder.CreateBox(
-    "castle",
-    { width: 12, height: 7, depth: 9 },
-    scene
-  );
-  castle.position.set(0, 3.5, 18);
-  castle.material = castleMaterial;
-
-  for (let i = -1; i <= 1; i++) {
-    const tower = BABYLON.MeshBuilder.CreateCylinder(
-      "tower-" + i,
-      { height: 11, diameter: 2.5 },
-      scene
-    );
-    tower.position.set(i * 5, 5.5, 18);
-    tower.material = castleMaterial;
-  }
-}
-
-function createTrees(scene) {
-  const trunkMaterial = new BABYLON.StandardMaterial("trunk-material", scene);
-  trunkMaterial.diffuseColor = new BABYLON.Color3(0.28, 0.16, 0.08);
-
-  const leafMaterial = new BABYLON.StandardMaterial("leaf-material", scene);
-  leafMaterial.diffuseColor = new BABYLON.Color3(0.08, 0.3, 0.12);
-
-  for (let i = 0; i < 18; i++) {
-    const x = Math.sin(i * 2.4) * 22;
-    const z = Math.cos(i * 1.7) * 22;
-
-    const trunk = BABYLON.MeshBuilder.CreateCylinder(
-      "tree-trunk-" + i,
-      { height: 2.5, diameter: 0.55 },
-      scene
-    );
-    trunk.position.set(x, 1.25, z);
-    trunk.material = trunkMaterial;
-
-    const leaves = BABYLON.MeshBuilder.CreateSphere(
-      "tree-leaves-" + i,
-      { diameter: 3, segments: 6 },
-      scene
-    );
-    leaves.position.set(x, 3.1, z);
-    leaves.material = leafMaterial;
-  }
 }
 
 function setupControls() {
@@ -308,6 +278,10 @@ function setupControls() {
     moving = false;
   });
 
+  joystick.addEventListener("touchcancel", () => {
+    moving = false;
+  });
+
   joystick.addEventListener("touchmove", event => {
     if (!moving || !player) return;
 
@@ -319,6 +293,7 @@ function setupControls() {
 
     player.position.x += dx * 0.04;
     player.position.z += dz * 0.04;
+
     event.preventDefault();
   }, { passive: false });
 
@@ -326,14 +301,19 @@ function setupControls() {
     if (!player) return;
 
     player.position.y = 2.2;
+
     setTimeout(() => {
-      if (player) player.position.y = 1;
+      if (player) {
+        player.position.y = 1;
+      }
     }, 350);
   };
 }
 
 function resizeEngine() {
-  if (engine) engine.resize();
+  if (engine) {
+    engine.resize();
+  }
 }
 
 function exitGame() {
