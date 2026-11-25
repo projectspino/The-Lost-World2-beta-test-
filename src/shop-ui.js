@@ -31,7 +31,7 @@ export function createShopUI(shopSystem, playerStats, inventory) {
       fontFamily: "Arial, sans-serif"
     });
 
-    function render() {
+    function render(statusMessage = "Selamat berbelanja!") {
       if (!shopElement) return;
 
       const gold = playerStats.stats.gold;
@@ -44,7 +44,7 @@ export function createShopUI(shopSystem, playerStats, inventory) {
         </h2>
 
         <p style="text-align:center">
-          Gold: <strong id="shop-gold">${gold}</strong> 🪙
+          Gold: <strong>${gold}</strong> 🪙
         </p>
 
         <h3>BARANG TOKO</h3>
@@ -55,7 +55,7 @@ export function createShopUI(shopSystem, playerStats, inventory) {
 
         <p id="shop-message"
            style="text-align:center;color:#f1d49a">
-          Selamat berbelanja!
+          ${statusMessage}
         </p>
 
         <button id="shop-close"
@@ -84,16 +84,19 @@ export function createShopUI(shopSystem, playerStats, inventory) {
 
         const info = document.createElement("span");
         info.textContent =
-          `${item.name} — ${item.price} Gold`;
+          `${item.name} (${item.type}) — ${item.price} Gold`;
 
         const button = document.createElement("button");
         button.textContent = "BELI";
 
         button.onclick = () => {
           const result = shopSystem.buyItem(item.id, 1);
-          message.textContent = result.message;
 
-          if (result.success) render();
+          if (result.success) {
+            render(result.message);
+          } else {
+            message.textContent = result.message;
+          }
         };
 
         row.append(info, button);
@@ -129,9 +132,12 @@ export function createShopUI(shopSystem, playerStats, inventory) {
 
         button.onclick = () => {
           const result = shopSystem.sellItem(item.name, 1);
-          message.textContent = result.message;
 
-          if (result.success) render();
+          if (result.success) {
+            render(result.message);
+          } else {
+            message.textContent = result.message;
+          }
         };
 
         row.append(info, button);
@@ -150,4 +156,4 @@ export function createShopUI(shopSystem, playerStats, inventory) {
     closeShop,
     dispose: closeShop
   };
-  }
+}
