@@ -1,3 +1,4 @@
+
 export function createPlayerStats() {
   const stats = {
     level: 1,
@@ -7,8 +8,10 @@ export function createPlayerStats() {
     xpToNextLevel: 100
   };
 
+  let isDead = false;
+
   function addXP(amount) {
-    if (amount <= 0) return;
+    if (amount <= 0 || isDead) return;
 
     stats.xp += amount;
 
@@ -27,20 +30,32 @@ export function createPlayerStats() {
   }
 
   function takeDamage(amount) {
-    if (amount <= 0) return;
+    if (amount <= 0 || isDead) return false;
 
     stats.hp = Math.max(0, stats.hp - amount);
+
+    if (stats.hp <= 0) {
+      isDead = true;
+    }
+
     updateUI();
+    return isDead;
   }
 
   function heal(amount) {
-    if (amount <= 0) return;
+    if (amount <= 0 || isDead) return;
 
     stats.hp = Math.min(
       stats.maxHp,
       stats.hp + amount
     );
 
+    updateUI();
+  }
+
+  function revive() {
+    stats.hp = stats.maxHp;
+    isDead = false;
     updateUI();
   }
 
@@ -52,13 +67,16 @@ export function createPlayerStats() {
     const levelText = document.getElementById("level-text");
 
     if (hpText) {
-      hpText.textContent =
-        `HP ${stats.hp}/${stats.maxHp}`;
+      hpText.textContent = isDead
+        ? "HP 0 — KALAH"
+        : `HP ${stats.hp}/${stats.maxHp}`;
     }
 
     if (hpBar) {
-      hpBar.style.width =
-        `${(stats.hp / stats.maxHp) * 100}%`;
+      const hpPercent =
+        (stats.hp / stats.maxHp) * 100;
+
+      hpBar.style.width = `${hpPercent}%`;
     }
 
     if (xpText) {
@@ -67,8 +85,10 @@ export function createPlayerStats() {
     }
 
     if (xpBar) {
-      xpBar.style.width =
-        `${(stats.xp / stats.xpToNextLevel) * 100}%`;
+      const xpPercent =
+        (stats.xp / stats.xpToNextLevel) * 100;
+
+      xpBar.style.width = `${xpPercent}%`;
     }
 
     if (levelText) {
@@ -84,6 +104,8 @@ export function createPlayerStats() {
     addXP,
     takeDamage,
     heal,
-    updateUI
+    revive,
+    updateUI,
+    isDead: () => isDead
   };
 }
