@@ -65,31 +65,21 @@ const settings = {
   fps: Number(localStorage.getItem("fps") || 60)
 };
 
-// ==============================
-// LOADING SCREEN
-// ==============================
-
 function showLoading() {
   app.innerHTML = `
     <div class="screen loading-screen" id="loading-screen">
       <div class="logo">⚔</div>
       <h1>THE LOST WORLD</h1>
       <p class="subtitle">AN EPIC FANTASY ADVENTURE</p>
-
       <div class="loading-track">
         <div class="loading-progress"></div>
       </div>
-
       <p>Preparing your adventure...</p>
     </div>
   `;
 
   setTimeout(showMainMenu, 2400);
 }
-
-// ==============================
-// MAIN MENU
-// ==============================
 
 function showMainMenu() {
   app.innerHTML = `
@@ -98,16 +88,13 @@ function showMainMenu() {
         <div class="logo">⚔</div>
         <h1>THE LOST WORLD</h1>
         <p class="subtitle">2.0 • BETA ADVENTURE</p>
-
         <div class="menu">
           <button class="game-button" id="play-button">
             NEW ADVENTURE
           </button>
-
           <button class="game-button secondary" id="settings-button">
             SETTINGS
           </button>
-
           <p class="version">Fantasy Open World RPG</p>
         </div>
       </div>
@@ -120,10 +107,6 @@ function showMainMenu() {
   document.getElementById("settings-button").onclick =
     showSettings;
 }
-
-// ==============================
-// CHARACTER SELECT
-// ==============================
 
 function showCharacterSelect() {
   const cards = characters.map(character => `
@@ -144,15 +127,10 @@ function showCharacterSelect() {
       <div class="panel">
         <h1>CHOOSE YOUR HERO</h1>
         <p class="subtitle">Select your adventure class</p>
-
-        <div class="character-list">
-          ${cards}
-        </div>
-
+        <div class="character-list">${cards}</div>
         <button class="game-button" id="start-button">
           START ADVENTURE
         </button>
-
         <button class="game-button secondary" id="back-button">
           BACK
         </button>
@@ -175,10 +153,6 @@ function showCharacterSelect() {
   document.getElementById("start-button").onclick = startGame;
   document.getElementById("back-button").onclick = showMainMenu;
 }
-
-// ==============================
-// SETTINGS
-// ==============================
 
 function showSettings() {
   app.innerHTML = `
@@ -217,16 +191,21 @@ function showSettings() {
         <div class="setting-row">
           <label for="fps">Target FPS</label>
           <select id="fps">
-            <option value="30" ${settings.fps === 30 ? "selected" : ""}>30 FPS</option>
-            <option value="45" ${settings.fps === 45 ? "selected" : ""}>45 FPS</option>
-            <option value="60" ${settings.fps === 60 ? "selected" : ""}>60 FPS</option>
+            <option value="30" ${settings.fps === 30 ? "selected" : ""}>
+              30 FPS
+            </option>
+            <option value="45" ${settings.fps === 45 ? "selected" : ""}>
+              45 FPS
+            </option>
+            <option value="60" ${settings.fps === 60 ? "selected" : ""}>
+              60 FPS
+            </option>
           </select>
         </div>
 
         <button class="game-button" id="save-settings">
           SAVE SETTINGS
         </button>
-
         <button class="game-button secondary" id="back-button">
           BACK
         </button>
@@ -251,14 +230,8 @@ function showSettings() {
   document.getElementById("back-button").onclick = showMainMenu;
 }
 
-// ==============================
-// GAME HUD STYLE
-// ==============================
-
 function addGameHudStyles() {
-  if (document.getElementById("game-hud-styles")) {
-    return;
-  }
+  if (document.getElementById("game-hud-styles")) return;
 
   const style = document.createElement("style");
   style.id = "game-hud-styles";
@@ -319,10 +292,6 @@ function addGameHudStyles() {
   document.head.appendChild(style);
 }
 
-// ==============================
-// START GAME
-// ==============================
-
 function startGame() {
   addGameHudStyles();
 
@@ -333,7 +302,6 @@ function startGame() {
       <div class="game-hud">
         <div class="hero-info">
           <strong>${selectedCharacter}</strong>
-
           <span id="level-text">Level 1</span>
 
           <div class="stat-label" id="hp-text">
@@ -376,13 +344,7 @@ function startGame() {
   });
 
   scene = new BABYLON.Scene(engine);
-
-  scene.clearColor = new BABYLON.Color4(
-    0.45,
-    0.65,
-    0.78,
-    1
-  );
+  scene.clearColor = new BABYLON.Color4(0.45, 0.65, 0.78, 1);
 
   const light = new BABYLON.HemisphericLight(
     "world-light",
@@ -429,27 +391,21 @@ function startGame() {
   );
 
   player.material = playerMaterial;
-
   camera.lockedTarget = player;
 
-  // Membuat dunia
   buildWorld(scene);
 
-  // Membuat statistik pemain
+  // Buat status pemain dan Inventory.
   playerStats = createPlayerStats();
-
-  // Membuat inventaris pemain
   inventory = createInventory();
 
-  // Item contoh untuk memeriksa tampilan inventaris
+  // Item awal untuk menguji tampilan tas.
   inventory.addItem("Health Potion", 2, "Consumable");
   inventory.addItem("Wood", 5, "Material");
   inventory.addItem("Goblin Token", 1, "Quest");
 
-  // Membuat tombol dan panel inventaris
   disposeInventoryUI = createInventoryUI(inventory);
 
-  // Mengaktifkan kontrol pemain
   const joystick = document.getElementById("joystick");
   const jumpButton = document.getElementById("jump-button");
 
@@ -461,14 +417,16 @@ function startGame() {
     jumpButton
   );
 
-  // Mengaktifkan sistem pertarungan
   const attackButton = document.getElementById("attack-button");
 
+  // Inventory dikirim ke sistem pertarungan
+  // agar loot Goblin bisa masuk ke tas pemain.
   disposeCombatSystem = createCombatSystem(
     scene,
     player,
     attackButton,
-    playerStats
+    playerStats,
+    inventory
   );
 
   engine.runRenderLoop(() => {
@@ -482,19 +440,11 @@ function startGame() {
   document.getElementById("exit-game").onclick = exitGame;
 }
 
-// ==============================
-// RESIZE ENGINE
-// ==============================
-
 function resizeEngine() {
   if (engine) {
     engine.resize();
   }
 }
-
-// ==============================
-// EXIT GAME
-// ==============================
 
 function exitGame() {
   if (disposePlayerController) {
@@ -535,9 +485,5 @@ function exitGame() {
   showMainMenu();
 }
 
-// ==============================
-// START APPLICATION
-// ==============================
-
 showLoading();
-              
+  
