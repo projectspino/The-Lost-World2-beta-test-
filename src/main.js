@@ -11,6 +11,8 @@ import { createInventoryUI } from "./inventory-ui.js";
 import { createEnemyAI } from "./enemy-ai.js";
 import { createQuestSystem } from "./quest-system.js";
 import { createQuestUI } from "./quest-ui.js";
+import { createShopSystem } from "./shop-system.js";
+import { createShopUI } from "./shop-ui.js";
 
 const app = document.getElementById("app");
 
@@ -29,6 +31,8 @@ let enemyAI = null;
 let questSystem = null;
 let playerStats = null;
 let inventory = null;
+let shopSystem = null;
+let shopUI = null;
 
 let selectedCharacter = "Ksatria";
 
@@ -403,6 +407,19 @@ function showNpcDialog(name, dialogue) {
     }
   }
 
+  // Tomas adalah NPC pedagang.
+  if (name === "Tomas" && shopUI) {
+    const shopButton = document.createElement("button");
+    shopButton.textContent = "BUKA TOKO";
+
+    shopButton.onclick = () => {
+      dialog.remove();
+      shopUI.openShop();
+    };
+
+    dialog.appendChild(shopButton);
+  }
+
   const closeButton = document.createElement("button");
   closeButton.textContent = "TUTUP";
   closeButton.onclick = () => dialog.remove();
@@ -423,6 +440,7 @@ function startGame() {
         <div class="hero-info">
           <strong>${selectedCharacter}</strong>
           <span id="level-text">Level 1</span>
+          <div id="gold-text">Gold: 100</div>
 
           <div class="stat-label" id="hp-text">
             HP 100/100
@@ -517,6 +535,10 @@ function startGame() {
   playerStats = createPlayerStats();
   inventory = createInventory();
   questSystem = createQuestSystem(playerStats, inventory);
+
+  // Buat sistem toko.
+  shopSystem = createShopSystem(playerStats, inventory);
+  shopUI = createShopUI(shopSystem, playerStats, inventory);
 
   // Hubungkan penambahan item ke progress quest.
   inventory.setOnItemAdded((name, quantity) => {
@@ -639,6 +661,14 @@ function exitGame() {
     disposeWorldInteraction = null;
   }
 
+  // Tutup dan bersihkan toko.
+  if (shopUI) {
+    shopUI.dispose();
+    shopUI = null;
+  }
+
+  shopSystem = null;
+
   window.removeEventListener("resize", resizeEngine);
 
   const dialog = document.getElementById("npc-dialog");
@@ -670,4 +700,4 @@ function exitGame() {
 }
 
 showLoading();
-      
+    
