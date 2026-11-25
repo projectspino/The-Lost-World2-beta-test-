@@ -8,6 +8,7 @@ import { createCombatSystem } from "./combat-system.js";
 import { createPlayerStats } from "./player-stats.js";
 import { createInventory } from "./inventory-system.js";
 import { createInventoryUI } from "./inventory-ui.js";
+import { createEnemyAI } from "./enemy-ai.js";
 
 const app = document.getElementById("app");
 
@@ -19,6 +20,7 @@ let player = null;
 let disposePlayerController = null;
 let disposeCombatSystem = null;
 let disposeInventoryUI = null;
+let disposeEnemyAI = null;
 
 let playerStats = null;
 let inventory = null;
@@ -88,13 +90,16 @@ function showMainMenu() {
         <div class="logo">⚔</div>
         <h1>THE LOST WORLD</h1>
         <p class="subtitle">2.0 • BETA ADVENTURE</p>
+
         <div class="menu">
           <button class="game-button" id="play-button">
             NEW ADVENTURE
           </button>
+
           <button class="game-button secondary" id="settings-button">
             SETTINGS
           </button>
+
           <p class="version">Fantasy Open World RPG</p>
         </div>
       </div>
@@ -127,10 +132,13 @@ function showCharacterSelect() {
       <div class="panel">
         <h1>CHOOSE YOUR HERO</h1>
         <p class="subtitle">Select your adventure class</p>
+
         <div class="character-list">${cards}</div>
+
         <button class="game-button" id="start-button">
           START ADVENTURE
         </button>
+
         <button class="game-button secondary" id="back-button">
           BACK
         </button>
@@ -206,6 +214,7 @@ function showSettings() {
         <button class="game-button" id="save-settings">
           SAVE SETTINGS
         </button>
+
         <button class="game-button secondary" id="back-button">
           BACK
         </button>
@@ -395,11 +404,9 @@ function startGame() {
 
   buildWorld(scene);
 
-  // Buat status pemain dan Inventory.
   playerStats = createPlayerStats();
   inventory = createInventory();
 
-  // Item awal untuk menguji tampilan tas.
   inventory.addItem("Health Potion", 2, "Consumable");
   inventory.addItem("Wood", 5, "Material");
   inventory.addItem("Goblin Token", 1, "Quest");
@@ -419,14 +426,25 @@ function startGame() {
 
   const attackButton = document.getElementById("attack-button");
 
-  // Inventory dikirim ke sistem pertarungan
-  // agar loot Goblin bisa masuk ke tas pemain.
   disposeCombatSystem = createCombatSystem(
     scene,
     player,
     attackButton,
     playerStats,
     inventory
+  );
+
+  // Aktifkan Skeleton, Dire Wolf, dan Orc.
+  disposeEnemyAI = createEnemyAI(
+    scene,
+    player,
+    (damage, enemyName) => {
+      if (playerStats) {
+        playerStats.takeDamage(damage);
+      }
+
+      console.log(enemyName + " menyerang pemain!");
+    }
   );
 
   engine.runRenderLoop(() => {
@@ -455,6 +473,11 @@ function exitGame() {
   if (disposeCombatSystem) {
     disposeCombatSystem();
     disposeCombatSystem = null;
+  }
+
+  if (disposeEnemyAI) {
+    disposeEnemyAI();
+    disposeEnemyAI = null;
   }
 
   if (disposeInventoryUI) {
@@ -486,4 +509,4 @@ function exitGame() {
 }
 
 showLoading();
-  
+    
