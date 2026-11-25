@@ -604,7 +604,8 @@ function startGame() {
     playerStats,
     inventory,
     enemyAI,
-    questSystem
+    questSystem,
+    equipmentSystem
   );
 
   document.getElementById("equipment-button").onclick = () => {
