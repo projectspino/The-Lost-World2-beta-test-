@@ -24,11 +24,14 @@ export function buildWorld(
   const leaves = material("leaves", "#24552B");
   const mountain = material("mountain", "#555B59");
   const path = material("path", "#A18B68");
+
   const npcClothes = [
     material("npc-clothes-1", "#315D9B"),
     material("npc-clothes-2", "#8B4936"),
-    material("npc-clothes-3", "#668447")
+    material("npc-clothes-3", "#668447"),
+    material("npc-clothes-4", "#B58A32")
   ];
+
   const skin = material("npc-skin", "#D5A477");
 
   // Tanah utama
@@ -150,7 +153,7 @@ export function buildWorld(
     roofMesh.material = roof;
   }
 
-  // NPC penduduk desa
+  // NPC penduduk dan pedagang desa
   const npcData = [
     {
       name: "Eldric",
@@ -172,6 +175,14 @@ export function buildWorld(
       x: -24,
       z: 5,
       color: 2
+    },
+    {
+      name: "Tomas",
+      dialogue: "Selamat datang di toko desa! Aku menjual ramuan dan perlengkapan untuk para petualang.",
+      x: -18,
+      z: -2,
+      color: 3,
+      merchant: true
     }
   ];
 
@@ -199,7 +210,8 @@ export function buildWorld(
     const npcMetadata = {
       npc: true,
       npcName: data.name,
-      dialogue: data.dialogue
+      dialogue: data.dialogue,
+      merchant: data.merchant === true
     };
 
     body.metadata = npcMetadata;
@@ -290,5 +302,4 @@ export function buildWorld(
   return function disposeWorldInteraction() {
     scene.onPointerObservable.remove(pointerObserver);
   };
-      }
-      
+}
