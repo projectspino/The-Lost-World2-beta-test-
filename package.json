@@ -1,0 +1,23 @@
+
+{
+  "name": "the-lost-world-2-beta",
+  "version": "2.0.0-beta.1",
+  "private": true,
+  "description": "The Lost World 2.0 - Fantasy Open World RPG",
+  "scripts": {
+    "build": "vite build",
+    "dev": "vite",
+    "android:add": "cap add android",
+    "android:sync": "cap sync android"
+  },
+  "dependencies": {
+    "@babylonjs/core": "^8.0.0",
+    "@babylonjs/loaders": "^8.0.0",
+    "@capacitor/android": "^7.4.3",
+    "@capacitor/core": "^7.4.3"
+  },
+  "devDependencies": {
+    "@capacitor/cli": "^7.4.3",
+    "vite": "^6.0.0"
+  }
+}
