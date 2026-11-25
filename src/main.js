@@ -9,6 +9,8 @@ import { createPlayerStats } from "./player-stats.js";
 import { createInventory } from "./inventory-system.js";
 import { createInventoryUI } from "./inventory-ui.js";
 import { createEnemyAI } from "./enemy-ai.js";
+import { createQuestSystem } from "./quest-system.js";
+import { createQuestUI } from "./quest-ui.js";
 
 const app = document.getElementById("app");
 
@@ -20,8 +22,10 @@ let player = null;
 let disposePlayerController = null;
 let disposeCombatSystem = null;
 let disposeInventoryUI = null;
+let disposeQuestUI = null;
 
 let enemyAI = null;
+let questSystem = null;
 
 let playerStats = null;
 let inventory = null;
@@ -416,6 +420,10 @@ function startGame() {
 
   disposeInventoryUI = createInventoryUI(inventory);
 
+  // Inisialisasi sistem Quest.
+  questSystem = createQuestSystem(playerStats, inventory);
+  disposeQuestUI = createQuestUI(questSystem);
+
   const joystick = document.getElementById("joystick");
   const jumpButton = document.getElementById("jump-button");
 
@@ -427,7 +435,6 @@ function startGame() {
     jumpButton
   );
 
-  // Buat AI musuh terlebih dahulu.
   enemyAI = createEnemyAI(
     scene,
     player,
@@ -442,7 +449,6 @@ function startGame() {
 
   const attackButton = document.getElementById("attack-button");
 
-  // Hubungkan sistem pertarungan dengan semua musuh.
   disposeCombatSystem = createCombatSystem(
     scene,
     player,
@@ -490,6 +496,11 @@ function exitGame() {
     disposeInventoryUI = null;
   }
 
+  if (disposeQuestUI) {
+    disposeQuestUI();
+    disposeQuestUI = null;
+  }
+
   window.removeEventListener("resize", resizeEngine);
 
   if (engine) {
@@ -503,6 +514,7 @@ function exitGame() {
   player = null;
   playerStats = null;
   inventory = null;
+  questSystem = null;
 
   const oldStyles = document.getElementById("game-hud-styles");
 
@@ -514,4 +526,3 @@ function exitGame() {
 }
 
 showLoading();
-                         
