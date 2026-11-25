@@ -1,10 +1,12 @@
+
 import * as BABYLON from "@babylonjs/core";
 
 export function createCombatSystem(
   scene,
   player,
   attackButton,
-  playerStats
+  playerStats,
+  inventory
 ) {
   const enemies = [];
   let disposed = false;
@@ -63,6 +65,36 @@ export function createCombatSystem(
     });
   }
 
+  // Hadiah dari Goblin
+  function giveGoblinLoot() {
+    if (!inventory) return;
+
+    const lootTable = [
+      {
+        name: "Goblin Token",
+        type: "Quest",
+        chance: 0.8
+      },
+      {
+        name: "Wood",
+        type: "Material",
+        chance: 0.5
+      },
+      {
+        name: "Health Potion",
+        type: "Consumable",
+        chance: 0.2
+      }
+    ];
+
+    for (const item of lootTable) {
+      if (Math.random() < item.chance) {
+        inventory.addItem(item.name, 1, item.type);
+      }
+    }
+  }
+
+  // Serangan pemain
   function attack() {
     if (disposed) return;
 
@@ -94,10 +126,13 @@ export function createCombatSystem(
           enemy.alive = false;
           enemy.mesh.dispose();
 
-          // Memberikan 25 XP
+          // Hadiah XP
           if (playerStats) {
             playerStats.addXP(25);
           }
+
+          // Hadiah item
+          giveGoblinLoot();
         }
 
         break;
@@ -107,6 +142,7 @@ export function createCombatSystem(
 
   attackButton.addEventListener("click", attack);
 
+  // Membersihkan sistem pertarungan
   return function disposeCombatSystem() {
     disposed = true;
 
@@ -126,4 +162,5 @@ export function createCombatSystem(
 
     enemies.length = 0;
   };
-}
+      }
+        
