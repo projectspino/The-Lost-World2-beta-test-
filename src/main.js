@@ -1,9 +1,11 @@
+
 import * as BABYLON from "@babylonjs/core";
 import "./styles/menu.css";
 
 import { buildWorld } from "./world.js";
 import { createPlayerController } from "./player-controller.js";
 import { createCombatSystem } from "./combat-system.js";
+import { createPlayerStats } from "./player-stats.js";
 
 const app = document.getElementById("app");
 
@@ -14,6 +16,7 @@ let player = null;
 
 let disposePlayerController = null;
 let disposeCombatSystem = null;
+let playerStats = null;
 
 let selectedCharacter = "Ksatria";
 
@@ -65,12 +68,8 @@ function showLoading() {
   app.innerHTML = `
     <div class="screen loading-screen" id="loading-screen">
       <div class="logo">⚔</div>
-
       <h1>THE LOST WORLD</h1>
-
-      <p class="subtitle">
-        AN EPIC FANTASY ADVENTURE
-      </p>
+      <p class="subtitle">AN EPIC FANTASY ADVENTURE</p>
 
       <div class="loading-track">
         <div class="loading-progress"></div>
@@ -91,17 +90,12 @@ function showMainMenu() {
   app.innerHTML = `
     <div class="screen main-screen">
       <div class="menu-content">
-
         <div class="logo">⚔</div>
 
         <h1>THE LOST WORLD</h1>
-
-        <p class="subtitle">
-          2.0 • BETA ADVENTURE
-        </p>
+        <p class="subtitle">2.0 • BETA ADVENTURE</p>
 
         <div class="menu">
-
           <button class="game-button" id="play-button">
             NEW ADVENTURE
           </button>
@@ -110,10 +104,7 @@ function showMainMenu() {
             SETTINGS
           </button>
 
-          <p class="version">
-            Fantasy Open World RPG
-          </p>
-
+          <p class="version">Fantasy Open World RPG</p>
         </div>
       </div>
     </div>
@@ -138,29 +129,17 @@ function showCharacterSelect() {
       }"
       data-character="${character.name}"
     >
-      <span class="character-icon">
-        ${character.icon}
-      </span>
-
-      <strong>
-        ${character.name}
-      </strong>
-
-      <small>
-        ${character.description}
-      </small>
+      <span class="character-icon">${character.icon}</span>
+      <strong>${character.name}</strong>
+      <small>${character.description}</small>
     </button>
   `).join("");
 
   app.innerHTML = `
     <div class="screen">
       <div class="panel">
-
         <h1>CHOOSE YOUR HERO</h1>
-
-        <p class="subtitle">
-          Select your adventure class
-        </p>
+        <p class="subtitle">Select your adventure class</p>
 
         <div class="character-list">
           ${cards}
@@ -173,7 +152,6 @@ function showCharacterSelect() {
         <button class="game-button secondary" id="back-button">
           BACK
         </button>
-
       </div>
     </div>
   `;
@@ -190,11 +168,8 @@ function showCharacterSelect() {
     };
   });
 
-  document.getElementById("start-button").onclick =
-    startGame;
-
-  document.getElementById("back-button").onclick =
-    showMainMenu;
+  document.getElementById("start-button").onclick = startGame;
+  document.getElementById("back-button").onclick = showMainMenu;
 }
 
 // ==============================
@@ -205,38 +180,20 @@ function showSettings() {
   app.innerHTML = `
     <div class="screen">
       <div class="panel">
-
         <h1>GAME SETTINGS</h1>
 
         <div class="setting-row">
-          <label for="quality">
-            Graphics Quality
-          </label>
-
+          <label for="quality">Graphics Quality</label>
           <select id="quality">
-            <option ${settings.quality === "Low" ? "selected" : ""}>
-              Low
-            </option>
-
-            <option ${settings.quality === "Medium" ? "selected" : ""}>
-              Medium
-            </option>
-
-            <option ${settings.quality === "High" ? "selected" : ""}>
-              High
-            </option>
-
-            <option ${settings.quality === "Ultra" ? "selected" : ""}>
-              Ultra
-            </option>
+            <option ${settings.quality === "Low" ? "selected" : ""}>Low</option>
+            <option ${settings.quality === "Medium" ? "selected" : ""}>Medium</option>
+            <option ${settings.quality === "High" ? "selected" : ""}>High</option>
+            <option ${settings.quality === "Ultra" ? "selected" : ""}>Ultra</option>
           </select>
         </div>
 
         <div class="setting-row">
-          <label for="shadows">
-            Shadows
-          </label>
-
+          <label for="shadows">Shadows</label>
           <input
             type="checkbox"
             id="shadows"
@@ -245,10 +202,7 @@ function showSettings() {
         </div>
 
         <div class="setting-row">
-          <label for="particles">
-            Particle Effects
-          </label>
-
+          <label for="particles">Particle Effects</label>
           <input
             type="checkbox"
             id="particles"
@@ -257,29 +211,15 @@ function showSettings() {
         </div>
 
         <div class="setting-row">
-          <label for="fps">
-            Target FPS
-          </label>
-
+          <label for="fps">Target FPS</label>
           <select id="fps">
-            <option
-              value="30"
-              ${settings.fps === 30 ? "selected" : ""}
-            >
+            <option value="30" ${settings.fps === 30 ? "selected" : ""}>
               30 FPS
             </option>
-
-            <option
-              value="45"
-              ${settings.fps === 45 ? "selected" : ""}
-            >
+            <option value="45" ${settings.fps === 45 ? "selected" : ""}>
               45 FPS
             </option>
-
-            <option
-              value="60"
-              ${settings.fps === 60 ? "selected" : ""}
-            >
+            <option value="60" ${settings.fps === 60 ? "selected" : ""}>
               60 FPS
             </option>
           </select>
@@ -292,23 +232,15 @@ function showSettings() {
         <button class="game-button secondary" id="back-button">
           BACK
         </button>
-
       </div>
     </div>
   `;
 
   document.getElementById("save-settings").onclick = () => {
-    settings.quality =
-      document.getElementById("quality").value;
-
-    settings.shadows =
-      document.getElementById("shadows").checked;
-
-    settings.particles =
-      document.getElementById("particles").checked;
-
-    settings.fps =
-      Number(document.getElementById("fps").value);
+    settings.quality = document.getElementById("quality").value;
+    settings.shadows = document.getElementById("shadows").checked;
+    settings.particles = document.getElementById("particles").checked;
+    settings.fps = Number(document.getElementById("fps").value);
 
     localStorage.setItem("quality", settings.quality);
     localStorage.setItem("shadows", settings.shadows);
@@ -318,8 +250,72 @@ function showSettings() {
     showSettings();
   };
 
-  document.getElementById("back-button").onclick =
-    showMainMenu;
+  document.getElementById("back-button").onclick = showMainMenu;
+}
+
+// ==============================
+// GAME HUD STYLE
+// ==============================
+
+function addGameHudStyles() {
+  const style = document.createElement("style");
+
+  style.id = "game-hud-styles";
+
+  style.textContent = `
+    .hero-info {
+      display: flex;
+      flex-direction: column;
+      gap: 4px;
+    }
+
+    .stat-label {
+      color: white;
+      font-size: 12px;
+      margin-top: 5px;
+    }
+
+    .stat-track {
+      width: 150px;
+      max-width: 35vw;
+      height: 9px;
+      background: #333;
+      border-radius: 8px;
+      overflow: hidden;
+      margin-top: 3px;
+    }
+
+    .stat-fill {
+      height: 100%;
+      width: 100%;
+      transition: width 0.2s ease;
+    }
+
+    .hp-fill {
+      background: #d83b3b;
+    }
+
+    .xp-fill {
+      background: #36b85a;
+    }
+
+    .action-buttons {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+    }
+
+    #attack-button,
+    #jump-button {
+      min-width: 65px;
+      min-height: 48px;
+      border-radius: 12px;
+      font-weight: bold;
+      touch-action: manipulation;
+    }
+  `;
+
+  document.head.appendChild(style);
 }
 
 // ==============================
@@ -327,64 +323,57 @@ function showSettings() {
 // ==============================
 
 function startGame() {
+  addGameHudStyles();
+
   app.innerHTML = `
     <div id="game-container">
-
       <canvas id="game-canvas"></canvas>
 
       <div class="game-hud">
-
         <div class="hero-info">
           <strong>${selectedCharacter}</strong>
 
-          <span>
-            Level 1 • The Lost World
-          </span>
+          <span id="level-text">Level 1</span>
+
+          <div class="stat-label" id="hp-text">
+            HP 100/100
+          </div>
+
+          <div class="stat-track">
+            <div id="hp-bar" class="stat-fill hp-fill"></div>
+          </div>
+
+          <div class="stat-label" id="xp-text">
+            XP 0/100
+          </div>
+
+          <div class="stat-track">
+            <div id="xp-bar" class="stat-fill xp-fill"></div>
+          </div>
         </div>
 
-        <button id="exit-game">
-          MENU
-        </button>
-
+        <button id="exit-game">MENU</button>
       </div>
 
       <div class="game-controls">
-
-        <div class="joystick" id="joystick">
-          ✥
-        </div>
+        <div class="joystick" id="joystick">✥</div>
 
         <div class="action-buttons">
-
-          <button id="attack-button">
-            ATTACK
-          </button>
-
-          <button id="jump-button">
-            JUMP
-          </button>
-
+          <button id="attack-button">ATTACK</button>
+          <button id="jump-button">JUMP</button>
         </div>
-
       </div>
-
     </div>
   `;
 
   const canvas = document.getElementById("game-canvas");
 
-  // Membuat engine 3D
-  engine = new BABYLON.Engine(
-    canvas,
-    true,
-    {
-      preserveDrawingBuffer: false,
-      stencil: false,
-      antialias: settings.quality !== "Low"
-    }
-  );
+  engine = new BABYLON.Engine(canvas, true, {
+    preserveDrawingBuffer: false,
+    stencil: false,
+    antialias: settings.quality !== "Low"
+  });
 
-  // Membuat scene
   scene = new BABYLON.Scene(engine);
 
   scene.clearColor = new BABYLON.Color4(
@@ -394,7 +383,6 @@ function startGame() {
     1
   );
 
-  // Pencahayaan dunia
   const light = new BABYLON.HemisphericLight(
     "world-light",
     new BABYLON.Vector3(0, 1, 0),
@@ -403,7 +391,6 @@ function startGame() {
 
   light.intensity = 0.9;
 
-  // Kamera third-person
   camera = new BABYLON.ArcRotateCamera(
     "camera",
     -Math.PI / 2,
@@ -414,12 +401,10 @@ function startGame() {
   );
 
   camera.attachControl(canvas, true);
-
   camera.lowerRadiusLimit = 5;
   camera.upperRadiusLimit = 14;
   camera.wheelPrecision = 60;
 
-  // Membuat karakter pemain
   player = BABYLON.MeshBuilder.CreateCapsule(
     "player",
     {
@@ -444,15 +429,16 @@ function startGame() {
 
   player.material = playerMaterial;
 
-  // Kamera mengikuti pemain
   camera.lockedTarget = player;
 
-  // Membuat dunia
+  // Membuat dunia 3D
   buildWorld(scene);
 
-  // Mengaktifkan kontrol pemain
-  const joystick = document.getElementById("joystick");
+  // Membuat statistik pemain
+  playerStats = createPlayerStats();
 
+  // Kontrol gerakan pemain
+  const joystick = document.getElementById("joystick");
   const jumpButton = document.getElementById("jump-button");
 
   disposePlayerController = createPlayerController(
@@ -463,31 +449,25 @@ function startGame() {
     jumpButton
   );
 
-  // Mengaktifkan sistem pertarungan
+  // Sistem pertarungan dan hadiah XP
   const attackButton = document.getElementById("attack-button");
 
   disposeCombatSystem = createCombatSystem(
     scene,
     player,
-    attackButton
+    attackButton,
+    playerStats
   );
 
-  // Menjalankan render
   engine.runRenderLoop(() => {
     if (scene) {
       scene.render();
     }
   });
 
-  // Menyesuaikan ukuran layar
-  window.addEventListener(
-    "resize",
-    resizeEngine
-  );
+  window.addEventListener("resize", resizeEngine);
 
-  // Tombol kembali ke menu
-  document.getElementById("exit-game").onclick =
-    exitGame;
+  document.getElementById("exit-game").onclick = exitGame;
 }
 
 // ==============================
@@ -505,26 +485,18 @@ function resizeEngine() {
 // ==============================
 
 function exitGame() {
-
-  // Membersihkan kontrol pemain
   if (disposePlayerController) {
     disposePlayerController();
     disposePlayerController = null;
   }
 
-  // Membersihkan sistem pertarungan
   if (disposeCombatSystem) {
     disposeCombatSystem();
     disposeCombatSystem = null;
   }
 
-  // Menghapus event resize
-  window.removeEventListener(
-    "resize",
-    resizeEngine
-  );
+  window.removeEventListener("resize", resizeEngine);
 
-  // Menghentikan dan menghapus engine
   if (engine) {
     engine.stopRenderLoop();
     engine.dispose();
@@ -534,8 +506,14 @@ function exitGame() {
   scene = null;
   camera = null;
   player = null;
+  playerStats = null;
 
-  // Kembali ke menu utama
+  const oldStyles = document.getElementById("game-hud-styles");
+
+  if (oldStyles) {
+    oldStyles.remove();
+  }
+
   showMainMenu();
 }
 
