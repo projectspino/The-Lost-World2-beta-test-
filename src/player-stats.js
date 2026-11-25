@@ -5,7 +5,8 @@ export function createPlayerStats() {
     hp: 100,
     maxHp: 100,
     xp: 0,
-    xpToNextLevel: 100
+    xpToNextLevel: 100,
+    gold: 100
   };
 
   let isDead = false;
@@ -18,7 +19,6 @@ export function createPlayerStats() {
     while (stats.xp >= stats.xpToNextLevel) {
       stats.xp -= stats.xpToNextLevel;
       stats.level += 1;
-
       stats.maxHp += 20;
       stats.hp = stats.maxHp;
 
@@ -27,6 +27,32 @@ export function createPlayerStats() {
     }
 
     updateUI();
+  }
+
+  function addGold(amount) {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return false;
+    }
+
+    stats.gold += Math.floor(amount);
+    updateUI();
+    return true;
+  }
+
+  function spendGold(amount) {
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return false;
+    }
+
+    amount = Math.floor(amount);
+
+    if (stats.gold < amount) {
+      return false;
+    }
+
+    stats.gold -= amount;
+    updateUI();
+    return true;
   }
 
   function takeDamage(amount) {
@@ -65,6 +91,7 @@ export function createPlayerStats() {
     const xpText = document.getElementById("xp-text");
     const xpBar = document.getElementById("xp-bar");
     const levelText = document.getElementById("level-text");
+    const goldText = document.getElementById("gold-text");
 
     if (hpText) {
       hpText.textContent = isDead
@@ -95,6 +122,11 @@ export function createPlayerStats() {
       levelText.textContent =
         `Level ${stats.level}`;
     }
+
+    if (goldText) {
+      goldText.textContent =
+        `Gold: ${stats.gold}`;
+    }
   }
 
   updateUI();
@@ -102,6 +134,8 @@ export function createPlayerStats() {
   return {
     stats,
     addXP,
+    addGold,
+    spendGold,
     takeDamage,
     heal,
     revive,
