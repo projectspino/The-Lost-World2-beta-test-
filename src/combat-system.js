@@ -8,7 +8,8 @@ export function createCombatSystem(
   playerStats,
   inventory,
   enemyAI = null,
-  questSystem = null
+  questSystem = null,
+  equipmentSystem = null
 ) {
   const goblins = [];
   let disposed = false;
@@ -65,6 +66,16 @@ export function createCombatSystem(
       hp: 100,
       alive: true
     });
+  }
+
+  function getAttackDamage() {
+    const baseDamage = 25;
+
+    if (!equipmentSystem) return baseDamage;
+
+    const bonuses = equipmentSystem.getBonuses();
+
+    return baseDamage + Math.max(0, bonuses.attack || 0);
   }
 
   function giveLoot(enemyName) {
@@ -189,9 +200,10 @@ export function createCombatSystem(
     if (!nearestTarget) return;
 
     const enemy = nearestTarget.enemy;
+    const damage = getAttackDamage();
 
     if (nearestTarget.source === "goblin") {
-      enemy.hp -= 25;
+      enemy.hp -= damage;
 
       enemy.mesh.scaling.set(1.15, 0.9, 1.15);
 
@@ -210,7 +222,7 @@ export function createCombatSystem(
         defeatEnemy(enemy);
       }
     } else {
-      enemy.health -= 25;
+      enemy.health -= damage;
 
       enemy.mesh.scaling.set(1.15, 0.9, 1.15);
 
@@ -251,4 +263,5 @@ export function createCombatSystem(
 
     goblins.length = 0;
   };
-}
+          }
+        
