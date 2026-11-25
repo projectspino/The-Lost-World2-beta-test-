@@ -27,43 +27,18 @@ let disposeWorldInteraction = null;
 
 let enemyAI = null;
 let questSystem = null;
-
 let playerStats = null;
 let inventory = null;
 
 let selectedCharacter = "Ksatria";
 
 const characters = [
-  {
-    name: "Ksatria",
-    icon: "⚔️",
-    description: "Petarung tangguh dengan pedang dan perisai."
-  },
-  {
-    name: "Pemanah",
-    icon: "🏹",
-    description: "Ahli serangan jarak jauh."
-  },
-  {
-    name: "Penyihir",
-    icon: "🔮",
-    description: "Pengguna kekuatan sihir."
-  },
-  {
-    name: "Assassin",
-    icon: "🗡️",
-    description: "Petarung cepat dan lincah."
-  },
-  {
-    name: "Paladin",
-    icon: "🛡️",
-    description: "Pelindung dengan kekuatan suci."
-  },
-  {
-    name: "Druid",
-    icon: "🌿",
-    description: "Pengendali kekuatan alam."
-  }
+  { name: "Ksatria", icon: "⚔️", description: "Petarung tangguh dengan pedang dan perisai." },
+  { name: "Pemanah", icon: "🏹", description: "Ahli serangan jarak jauh." },
+  { name: "Penyihir", icon: "🔮", description: "Pengguna kekuatan sihir." },
+  { name: "Assassin", icon: "🗡️", description: "Petarung cepat dan lincah." },
+  { name: "Paladin", icon: "🛡️", description: "Pelindung dengan kekuatan suci." },
+  { name: "Druid", icon: "🌿", description: "Pengendali kekuatan alam." }
 ];
 
 const settings = {
@@ -79,11 +54,9 @@ function showLoading() {
       <div class="logo">⚔</div>
       <h1>THE LOST WORLD</h1>
       <p class="subtitle">AN EPIC FANTASY ADVENTURE</p>
-
       <div class="loading-track">
         <div class="loading-progress"></div>
       </div>
-
       <p>Preparing your adventure...</p>
     </div>
   `;
@@ -98,37 +71,24 @@ function showMainMenu() {
         <div class="logo">⚔</div>
         <h1>THE LOST WORLD</h1>
         <p class="subtitle">2.0 • BETA ADVENTURE</p>
-
         <div class="menu">
-          <button class="game-button" id="play-button">
-            NEW ADVENTURE
-          </button>
-
-          <button class="game-button secondary" id="settings-button">
-            SETTINGS
-          </button>
-
+          <button class="game-button" id="play-button">NEW ADVENTURE</button>
+          <button class="game-button secondary" id="settings-button">SETTINGS</button>
           <p class="version">Fantasy Open World RPG</p>
         </div>
       </div>
     </div>
   `;
 
-  document.getElementById("play-button").onclick =
-    showCharacterSelect;
-
-  document.getElementById("settings-button").onclick =
-    showSettings;
+  document.getElementById("play-button").onclick = showCharacterSelect;
+  document.getElementById("settings-button").onclick = showSettings;
 }
 
 function showCharacterSelect() {
   const cards = characters.map(character => `
-    <button
-      class="character ${
-        character.name === selectedCharacter ? "selected" : ""
-      }"
-      data-character="${character.name}"
-    >
+    <button class="character ${
+      character.name === selectedCharacter ? "selected" : ""
+    }" data-character="${character.name}">
       <span class="character-icon">${character.icon}</span>
       <strong>${character.name}</strong>
       <small>${character.description}</small>
@@ -140,16 +100,9 @@ function showCharacterSelect() {
       <div class="panel">
         <h1>CHOOSE YOUR HERO</h1>
         <p class="subtitle">Select your adventure class</p>
-
         <div class="character-list">${cards}</div>
-
-        <button class="game-button" id="start-button">
-          START ADVENTURE
-        </button>
-
-        <button class="game-button secondary" id="back-button">
-          BACK
-        </button>
+        <button class="game-button" id="start-button">START ADVENTURE</button>
+        <button class="game-button secondary" id="back-button">BACK</button>
       </div>
     </div>
   `;
@@ -188,44 +141,25 @@ function showSettings() {
 
         <div class="setting-row">
           <label for="shadows">Shadows</label>
-          <input
-            type="checkbox"
-            id="shadows"
-            ${settings.shadows ? "checked" : ""}
-          >
+          <input type="checkbox" id="shadows" ${settings.shadows ? "checked" : ""}>
         </div>
 
         <div class="setting-row">
           <label for="particles">Particle Effects</label>
-          <input
-            type="checkbox"
-            id="particles"
-            ${settings.particles ? "checked" : ""}
-          >
+          <input type="checkbox" id="particles" ${settings.particles ? "checked" : ""}>
         </div>
 
         <div class="setting-row">
           <label for="fps">Target FPS</label>
           <select id="fps">
-            <option value="30" ${settings.fps === 30 ? "selected" : ""}>
-              30 FPS
-            </option>
-            <option value="45" ${settings.fps === 45 ? "selected" : ""}>
-              45 FPS
-            </option>
-            <option value="60" ${settings.fps === 60 ? "selected" : ""}>
-              60 FPS
-            </option>
+            <option value="30" ${settings.fps === 30 ? "selected" : ""}>30 FPS</option>
+            <option value="45" ${settings.fps === 45 ? "selected" : ""}>45 FPS</option>
+            <option value="60" ${settings.fps === 60 ? "selected" : ""}>60 FPS</option>
           </select>
         </div>
 
-        <button class="game-button" id="save-settings">
-          SAVE SETTINGS
-        </button>
-
-        <button class="game-button secondary" id="back-button">
-          BACK
-        </button>
+        <button class="game-button" id="save-settings">SAVE SETTINGS</button>
+        <button class="game-button secondary" id="back-button">BACK</button>
       </div>
     </div>
   `;
@@ -282,13 +216,8 @@ function addGameHudStyles() {
       transition: width 0.2s ease;
     }
 
-    .hp-fill {
-      background: #d83b3b;
-    }
-
-    .xp-fill {
-      background: #36b85a;
-    }
+    .hp-fill { background: #d83b3b; }
+    .xp-fill { background: #36b85a; }
 
     .action-buttons {
       display: flex;
@@ -304,9 +233,82 @@ function addGameHudStyles() {
       font-weight: bold;
       touch-action: manipulation;
     }
+
+    .npc-dialog {
+      position: absolute;
+      left: 50%;
+      bottom: 100px;
+      transform: translateX(-50%);
+      width: min(420px, 88vw);
+      padding: 16px;
+      color: white;
+      background: rgba(20, 25, 30, 0.96);
+      border: 1px solid #b89552;
+      border-radius: 12px;
+      z-index: 20;
+      text-align: center;
+    }
+
+    .npc-dialog h3 {
+      margin: 0 0 8px;
+      color: #e7c77e;
+    }
+
+    .npc-dialog p {
+      line-height: 1.5;
+    }
+
+    .npc-dialog button {
+      margin: 5px;
+      padding: 10px 16px;
+      border: 0;
+      border-radius: 8px;
+      font-weight: bold;
+    }
   `;
 
   document.head.appendChild(style);
+}
+
+function showNpcDialog(name, dialogue) {
+  const oldDialog = document.getElementById("npc-dialog");
+  if (oldDialog) oldDialog.remove();
+
+  const dialog = document.createElement("div");
+  dialog.id = "npc-dialog";
+  dialog.className = "npc-dialog";
+
+  const title = document.createElement("h3");
+  title.textContent = name;
+
+  const message = document.createElement("p");
+  message.textContent = dialogue;
+
+  const closeButton = document.createElement("button");
+  closeButton.textContent = "TUTUP";
+  closeButton.onclick = () => dialog.remove();
+
+  dialog.append(title, message);
+
+  if (name === "Eldric") {
+    const questButton = document.createElement("button");
+    questButton.textContent = "TERIMA QUEST";
+
+    questButton.onclick = () => {
+      const accepted = questSystem.acceptQuest("goblin-hunt");
+
+      message.textContent = accepted
+        ? "Quest Goblin Hunt diterima! Kalahkan 5 Goblin."
+        : "Quest tidak dapat diterima. Mungkin sudah aktif atau selesai.";
+
+      questButton.disabled = true;
+    };
+
+    dialog.appendChild(questButton);
+  }
+
+  dialog.appendChild(closeButton);
+  document.getElementById("game-container").appendChild(dialog);
 }
 
 function startGame() {
@@ -320,30 +322,20 @@ function startGame() {
         <div class="hero-info">
           <strong>${selectedCharacter}</strong>
           <span id="level-text">Level 1</span>
-
-          <div class="stat-label" id="hp-text">
-            HP 100/100
-          </div>
-
+          <div class="stat-label" id="hp-text">HP 100/100</div>
           <div class="stat-track">
             <div id="hp-bar" class="stat-fill hp-fill"></div>
           </div>
-
-          <div class="stat-label" id="xp-text">
-            XP 0/100
-          </div>
-
+          <div class="stat-label" id="xp-text">XP 0/100</div>
           <div class="stat-track">
             <div id="xp-bar" class="stat-fill xp-fill"></div>
           </div>
         </div>
-
         <button id="exit-game">MENU</button>
       </div>
 
       <div class="game-controls">
         <div class="joystick" id="joystick">✥</div>
-
         <div class="action-buttons">
           <button id="attack-button">ATTACK</button>
           <button id="jump-button">JUMP</button>
@@ -387,10 +379,7 @@ function startGame() {
 
   player = BABYLON.MeshBuilder.CreateCapsule(
     "player",
-    {
-      height: 2,
-      radius: 0.45
-    },
+    { height: 2, radius: 0.45 },
     scene
   );
 
@@ -401,50 +390,39 @@ function startGame() {
     scene
   );
 
-  playerMaterial.diffuseColor = new BABYLON.Color3(
-    0.65,
-    0.72,
-    0.82
-  );
-
+  playerMaterial.diffuseColor = new BABYLON.Color3(0.65, 0.72, 0.82);
   player.material = playerMaterial;
   camera.lockedTarget = player;
 
-  // Buat statistik dan inventori sebelum dunia.
   playerStats = createPlayerStats();
   inventory = createInventory();
-
-  // Buat Quest System.
   questSystem = createQuestSystem(playerStats, inventory);
 
-  // Hubungkan penambahan item ke progress Quest.
   inventory.setOnItemAdded((name, quantity) => {
     if (questSystem) {
       questSystem.addProgress(name, quantity);
     }
   });
 
-  // Item awal pemain.
   inventory.addItem("Health Potion", 2, "Consumable");
   inventory.addItem("Wood", 5, "Material");
   inventory.addItem("Goblin Token", 1, "Quest");
 
-  // Bangun dunia dan hubungkan pohon ke inventori.
-  disposeWorldInteraction = buildWorld(scene, (amount) => {
-    if (!inventory) return;
+  disposeWorldInteraction = buildWorld(
+    scene,
+    (amount) => {
+      if (!inventory) return;
 
-    const added = inventory.addItem(
-      "Wood",
-      amount,
-      "Material"
-    );
+      const added = inventory.addItem("Wood", amount, "Material");
 
-    if (added) {
-      console.log("Mendapatkan " + amount + " Wood!");
-    } else {
-      console.log("Inventori penuh!");
-    }
-  });
+      if (added) {
+        console.log("Mendapatkan " + amount + " Wood!");
+      } else {
+        console.log("Inventori penuh!");
+      }
+    },
+    showNpcDialog
+  );
 
   disposeInventoryUI = createInventoryUI(inventory);
   disposeQuestUI = createQuestUI(questSystem);
@@ -460,7 +438,6 @@ function startGame() {
     jumpButton
   );
 
-  // Sistem AI musuh.
   enemyAI = createEnemyAI(
     scene,
     player,
@@ -475,7 +452,6 @@ function startGame() {
 
   const attackButton = document.getElementById("attack-button");
 
-  // Pertarungan terhubung ke Quest.
   disposeCombatSystem = createCombatSystem(
     scene,
     player,
@@ -487,20 +463,15 @@ function startGame() {
   );
 
   engine.runRenderLoop(() => {
-    if (scene) {
-      scene.render();
-    }
+    if (scene) scene.render();
   });
 
   window.addEventListener("resize", resizeEngine);
-
   document.getElementById("exit-game").onclick = exitGame;
 }
 
 function resizeEngine() {
-  if (engine) {
-    engine.resize();
-  }
+  if (engine) engine.resize();
 }
 
 function exitGame() {
@@ -536,6 +507,9 @@ function exitGame() {
 
   window.removeEventListener("resize", resizeEngine);
 
+  const dialog = document.getElementById("npc-dialog");
+  if (dialog) dialog.remove();
+
   if (engine) {
     engine.stopRenderLoop();
     engine.dispose();
@@ -550,13 +524,9 @@ function exitGame() {
   questSystem = null;
 
   const oldStyles = document.getElementById("game-hud-styles");
-
-  if (oldStyles) {
-    oldStyles.remove();
-  }
+  if (oldStyles) oldStyles.remove();
 
   showMainMenu();
 }
 
 showLoading();
-      
