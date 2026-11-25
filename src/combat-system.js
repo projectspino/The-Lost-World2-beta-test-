@@ -1,7 +1,11 @@
-
 import * as BABYLON from "@babylonjs/core";
 
-export function createCombatSystem(scene, player, attackButton) {
+export function createCombatSystem(
+  scene,
+  player,
+  attackButton,
+  playerStats
+) {
   const enemies = [];
   let disposed = false;
 
@@ -9,19 +13,26 @@ export function createCombatSystem(scene, player, attackButton) {
     "goblin-material",
     scene
   );
-  goblinMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.55, 0.18);
+
+  goblinMaterial.diffuseColor =
+    new BABYLON.Color3(0.2, 0.55, 0.18);
 
   const eyeMaterial = new BABYLON.StandardMaterial(
     "goblin-eye-material",
     scene
   );
-  eyeMaterial.diffuseColor = new BABYLON.Color3(1, 0.8, 0.1);
+
+  eyeMaterial.diffuseColor =
+    new BABYLON.Color3(1, 0.8, 0.1);
 
   // Membuat lima Goblin
   for (let i = 0; i < 5; i++) {
     const goblin = BABYLON.MeshBuilder.CreateCapsule(
       "goblin-" + i,
-      { height: 1.7, radius: 0.4 },
+      {
+        height: 1.7,
+        radius: 0.4
+      },
       scene
     );
 
@@ -35,7 +46,9 @@ export function createCombatSystem(scene, player, attackButton) {
 
     const eye = BABYLON.MeshBuilder.CreateSphere(
       "goblin-eye-" + i,
-      { diameter: 0.12 },
+      {
+        diameter: 0.12
+      },
       scene
     );
 
@@ -50,7 +63,7 @@ export function createCombatSystem(scene, player, attackButton) {
     });
   }
 
-  const attack = () => {
+  function attack() {
     if (disposed) return;
 
     for (const enemy of enemies) {
@@ -64,7 +77,11 @@ export function createCombatSystem(scene, player, attackButton) {
       if (distance <= 3.5) {
         enemy.hp -= 25;
 
-        enemy.mesh.scaling.set(1.15, 0.9, 1.15);
+        enemy.mesh.scaling.set(
+          1.15,
+          0.9,
+          1.15
+        );
 
         setTimeout(() => {
           if (!disposed && enemy.alive) {
@@ -72,28 +89,41 @@ export function createCombatSystem(scene, player, attackButton) {
           }
         }, 120);
 
+        // Goblin dikalahkan
         if (enemy.hp <= 0) {
           enemy.alive = false;
           enemy.mesh.dispose();
+
+          // Memberikan 25 XP
+          if (playerStats) {
+            playerStats.addXP(25);
+          }
         }
 
         break;
       }
     }
-  };
+  }
 
   attackButton.addEventListener("click", attack);
 
   return function disposeCombatSystem() {
     disposed = true;
-    attackButton.removeEventListener("click", attack);
+
+    attackButton.removeEventListener(
+      "click",
+      attack
+    );
 
     for (const enemy of enemies) {
-      if (enemy.mesh && !enemy.mesh.isDisposed()) {
+      if (
+        enemy.mesh &&
+        !enemy.mesh.isDisposed()
+      ) {
         enemy.mesh.dispose();
       }
     }
 
     enemies.length = 0;
   };
-    }
+}
