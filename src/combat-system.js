@@ -7,7 +7,8 @@ export function createCombatSystem(
   attackButton,
   playerStats,
   inventory,
-  enemyAI = null
+  enemyAI = null,
+  questSystem = null
 ) {
   const goblins = [];
   let disposed = false;
@@ -47,9 +48,7 @@ export function createCombatSystem(
 
     const eye = BABYLON.MeshBuilder.CreateSphere(
       "goblin-eye-" + i,
-      {
-        diameter: 0.12
-      },
+      { diameter: 0.12 },
       scene
     );
 
@@ -99,6 +98,8 @@ export function createCombatSystem(
   }
 
   function defeatEnemy(enemy) {
+    if (!enemy.alive) return;
+
     enemy.alive = false;
 
     if (enemy.mesh && !enemy.mesh.isDisposed()) {
@@ -109,6 +110,11 @@ export function createCombatSystem(
       playerStats.addXP(enemy.name === "Orc" ? 40 : 25);
     }
 
+    // Tambahkan progres misi sesuai jenis musuh.
+    if (questSystem) {
+      questSystem.addProgress(enemy.name, 1);
+    }
+
     giveLoot(enemy.name);
   }
 
@@ -116,12 +122,15 @@ export function createCombatSystem(
     const targets = [];
 
     for (const goblin of goblins) {
-      if (goblin.alive && goblin.mesh && !goblin.mesh.isDisposed()) {
+      if (
+        goblin.alive &&
+        goblin.mesh &&
+        !goblin.mesh.isDisposed()
+      ) {
         targets.push({
           enemy: goblin,
           mesh: goblin.mesh,
           name: "Goblin",
-          health: goblin.hp,
           source: "goblin"
         });
       }
@@ -140,7 +149,6 @@ export function createCombatSystem(
             enemy,
             mesh: enemy.mesh,
             name: enemy.name,
-            health: enemy.health,
             source: "enemyAI"
           });
         }
@@ -228,15 +236,12 @@ export function createCombatSystem(
     attackButton.removeEventListener("click", attack);
 
     for (const goblin of goblins) {
-      if (
-        goblin.mesh &&
-        !goblin.mesh.isDisposed()
-      ) {
+      if (goblin.mesh && !goblin.mesh.isDisposed()) {
         goblin.mesh.dispose();
       }
     }
 
     goblins.length = 0;
   };
-    }
-          
+         }
+    
