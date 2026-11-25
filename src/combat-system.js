@@ -13,6 +13,13 @@ export function createCombatSystem(
   const goblins = [];
   let disposed = false;
 
+  const goldRewards = {
+    Goblin: 5,
+    Skeleton: 8,
+    "Dire Wolf": 10,
+    Orc: 15
+  };
+
   const goblinMaterial = new BABYLON.StandardMaterial(
     "goblin-material",
     scene
@@ -27,14 +34,10 @@ export function createCombatSystem(
   eyeMaterial.diffuseColor =
     new BABYLON.Color3(1, 0.8, 0.1);
 
-  // Membuat lima Goblin.
   for (let i = 0; i < 5; i++) {
     const goblin = BABYLON.MeshBuilder.CreateCapsule(
       "goblin-" + i,
-      {
-        height: 1.7,
-        radius: 0.4
-      },
+      { height: 1.7, radius: 0.4 },
       scene
     );
 
@@ -108,9 +111,14 @@ export function createCombatSystem(
 
     if (playerStats) {
       playerStats.addXP(enemy.name === "Orc" ? 40 : 25);
+
+      const reward = goldRewards[enemy.name] || 0;
+
+      if (reward > 0 && playerStats.addGold) {
+        playerStats.addGold(reward);
+      }
     }
 
-    // Tambahkan progres misi sesuai jenis musuh.
     if (questSystem) {
       questSystem.addProgress(enemy.name, 1);
     }
@@ -243,5 +251,4 @@ export function createCombatSystem(
 
     goblins.length = 0;
   };
-         }
-    
+}
