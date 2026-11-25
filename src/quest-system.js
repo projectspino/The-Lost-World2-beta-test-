@@ -49,7 +49,21 @@ export function createQuestSystem(playerStats, inventory) {
   ];
 
   function getQuests() {
-    return quests.map(quest => ({ ...quest }));
+    return quests.map(quest => ({
+      ...quest,
+      rewardItems: quest.rewardItems.map(item => ({ ...item }))
+    }));
+  }
+
+  function getQuest(id) {
+    const quest = quests.find(item => item.id === id);
+
+    if (!quest) return null;
+
+    return {
+      ...quest,
+      rewardItems: quest.rewardItems.map(item => ({ ...item }))
+    };
   }
 
   function acceptQuest(id) {
@@ -118,9 +132,11 @@ export function createQuestSystem(playerStats, inventory) {
 
   return {
     getQuests,
+    getQuest,
     getActiveQuests,
     acceptQuest,
     addProgress,
     claimReward
   };
-    }
+      }
+      
