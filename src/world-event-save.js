@@ -9,23 +9,37 @@ export class WorldEventSave {
     if (!eventSystem) return false;
 
     try {
+      const cooldowns = eventSystem.cooldowns instanceof Map
+        ? [...eventSystem.cooldowns.entries()]
+        : [];
+
+      const completedEvents = eventSystem.completedEvents instanceof Set
+        ? [...eventSystem.completedEvents]
+        : [];
+
+      const active = eventSystem.activeEvent;
+
       const data = {
         version: 1,
-        completedEvents: [
-          ...(eventSystem.completedEvents ?? [])
-        ],
-        cooldowns: [
-          ...(eventSystem.cooldowns ?? [])
-        ],
-        activeEvent: eventSystem.activeEvent
-          ? {
-              id: eventSystem.activeEvent.id,
-              remaining: Math.max(
-                0,
-                Number(eventSystem.activeEvent.remaining) || 0
-              )
-            }
-          : null,
+        completedEvents: completedEvents.filter(
+          id => typeof id === "string"
+        ),
+        cooldowns: cooldowns.filter(
+          ([id, time]) =>
+            typeof id === "string" &&
+            Number.isFinite(time) &&
+            time > 0
+        ),
+        activeEvent:
+          active && typeof active.id === "string"
+            ? {
+                id: active.id,
+                remaining: Math.max(
+                  0,
+                  Number(active.remaining) || 0
+                )
+              }
+            : null,
         savedAt: Date.now()
       };
 
@@ -57,30 +71,52 @@ export class WorldEventSave {
         return null;
       }
 
-      return {
-        completedEvents: data.completedEvents.filter(
-          id => typeof id === "string"
-        ),
-        cooldowns: data.cooldowns.filter(
+      const savedAt = Number(data.savedAt);
+      const elapsedSeconds = Number.isFinite(savedAt) && savedAt > 0
+        ? Math.max(0, (Date.now() - savedAt) / 1000)
+        : 0;
+
+      const cooldowns = data.cooldowns
+        .filter(
           entry =>
             Array.isArray(entry) &&
             typeof entry[0] === "string" &&
             Number.isFinite(entry[1]) &&
-            entry[1] >= 0
+            entry[1] > 0
+        )
+        .map(([id, time]) => [
+          id,
+          Math.max(0, time - elapsedSeconds)
+        ])
+        .filter(([, time]) => time > 0);
+
+      let activeEvent = null;
+
+      if (
+        data.activeEvent &&
+        typeof data.activeEvent.id === "string" &&
+        Number.isFinite(data.activeEvent.remaining)
+      ) {
+        const remaining = Math.max(
+          0,
+          data.activeEvent.remaining - elapsedSeconds
+        );
+
+        if (remaining > 0) {
+          activeEvent = {
+            id: data.activeEvent.id,
+            remaining
+          };
+        }
+      }
+
+      return {
+        completedEvents: data.completedEvents.filter(
+          id => typeof id === "string"
         ),
-        activeEvent:
-          data.activeEvent &&
-          typeof data.activeEvent.id === "string" &&
-          Number.isFinite(data.activeEvent.remaining)
-            ? {
-                id: data.activeEvent.id,
-                remaining: Math.max(
-                  0,
-                  data.activeEvent.remaining
-                )
-              }
-            : null,
-        savedAt: Number(data.savedAt) || 0
+        cooldowns,
+        activeEvent,
+        savedAt: Number.isFinite(savedAt) ? savedAt : Date.now()
       };
     } catch (error) {
       console.error("World event load error:", error);
@@ -109,14 +145,14 @@ export class WorldEventSave {
         data.activeEvent.id
       );
 
-      if (event && data.activeEvent.remaining > 0) {
+      if (event) {
         eventSystem.activeEvent = {
           ...event,
           rewards: Array.isArray(event.rewards)
             ? event.rewards.map(item => ({ ...item }))
             : [],
           remaining: data.activeEvent.remaining,
-          startedAt: data.savedAt,
+          startedAt: Date.now(),
           status: "active"
         };
       }
