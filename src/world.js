@@ -8,6 +8,11 @@ export function buildWorld(
     if (typeof window !== "undefined") {
       window.alert(name + "\n\n" + dialogue);
     }
+  },
+  onDungeonEnter = (dungeonName) => {
+    if (typeof window !== "undefined") {
+      window.alert("Memasuki " + dungeonName);
+    }
   }
 ) {
   const material = (name, color) => {
@@ -34,6 +39,7 @@ export function buildWorld(
     "dungeon-torch-material",
     scene
   );
+
   torchMaterial.diffuseColor = new BABYLON.Color3(1, 0.35, 0.05);
   torchMaterial.emissiveColor = new BABYLON.Color3(1, 0.18, 0.02);
 
@@ -52,6 +58,7 @@ export function buildWorld(
     { width: 180, height: 180, subdivisions: 2 },
     scene
   );
+
   ground.material = grass;
 
   // Sungai
@@ -60,6 +67,7 @@ export function buildWorld(
     { width: 9, height: 150 },
     scene
   );
+
   river.position.set(22, 0.04, 0);
   river.material = water;
 
@@ -69,6 +77,7 @@ export function buildWorld(
     { width: 8, height: 70 },
     scene
   );
+
   road.position.set(-12, 0.06, 0);
   road.material = path;
 
@@ -519,7 +528,10 @@ export function buildWorld(
     rock.material = stone;
   }
 
-  // Interaksi pohon dan NPC
+  // =====================================
+  // INTERAKSI POHON, NPC, DAN DUNGEON
+  // =====================================
+
   const pointerObserver = scene.onPointerObservable.add(
     (pointerInfo) => {
       if (
@@ -541,6 +553,14 @@ export function buildWorld(
       const metadata = selected.metadata;
 
       if (!metadata) return;
+
+      // Masuk Dungeon Kuno
+      if (metadata.dungeonEntrance) {
+        onDungeonEnter(
+          metadata.dungeonName || "Dungeon Kuno"
+        );
+        return;
+      }
 
       // Bicara dengan NPC
       if (metadata.npc) {
@@ -566,5 +586,4 @@ export function buildWorld(
   return function disposeWorldInteraction() {
     scene.onPointerObservable.remove(pointerObserver);
   };
-      }
-  
+}
