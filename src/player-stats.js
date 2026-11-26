@@ -1,5 +1,5 @@
 
-const SAVE_KEY = "the-lost-world-player-stats";
+const STORAGE_KEY = "lost_world_player_stats_v2";
 
 export function createPlayerStats() {
   const stats = {
@@ -8,239 +8,244 @@ export function createPlayerStats() {
     maxHp: 100,
     xp: 0,
     xpToNextLevel: 100,
-    gold: 100
+    gold: 100,
+    attack: 10,
+    defense: 5
   };
 
-  let isDead = false;
+  let dead = false;
+
+  function updateUI() {
+    document.dispatchEvent(
+      new CustomEvent("player-stats-updated", {
+        detail: { ...stats, isDead: dead }
+      })
+    );
+  }
 
   function addXP(amount) {
-    if (!Number.isFinite(amount) || amount <= 0 || isDead) return;
+    const value = Number(amount);
 
-    stats.xp += Math.floor(amount);
+    if (!Number.isFinite(value) || value <= 0 || dead) {
+      return false;
+    }
+
+    stats.xp += Math.floor(value);
 
     while (stats.xp >= stats.xpToNextLevel) {
       stats.xp -= stats.xpToNextLevel;
       stats.level += 1;
-      stats.maxHp += 20;
-      stats.hp = stats.maxHp;
+      stats.xpToNextLevel = Math.floor(
+        stats.xpToNextLevel * 1.25
+      );
 
-      stats.xpToNextLevel =
-        Math.floor(stats.xpToNextLevel * 1.5);
+      stats.maxHp += 20;
+      stats.attack += 3;
+      stats.defense += 2;
+      stats.hp = stats.maxHp;
     }
 
     updateUI();
+    return true;
   }
 
   function addGold(amount) {
-    if (!Number.isFinite(amount) || amount <= 0) {
+    const value = Number(amount);
+
+    if (!Number.isFinite(value) || value <= 0) {
       return false;
     }
 
-    stats.gold += Math.floor(amount);
+    stats.gold += Math.floor(value);
     updateUI();
     return true;
   }
 
   function spendGold(amount) {
-    if (!Number.isFinite(amount) || amount <= 0) {
+    const value = Number(amount);
+
+    if (
+      !Number.isFinite(value) ||
+      value <= 0 ||
+      stats.gold < value
+    ) {
       return false;
     }
 
-    amount = Math.floor(amount);
-
-    if (stats.gold < amount) {
-      return false;
-    }
-
-    stats.gold -= amount;
+    stats.gold -= Math.floor(value);
     updateUI();
     return true;
   }
 
   function takeDamage(amount) {
-    if (!Number.isFinite(amount) || amount <= 0 || isDead) {
+    const value = Number(amount);
+
+    if (!Number.isFinite(value) || value <= 0 || dead) {
       return false;
     }
 
-    stats.hp = Math.max(0, stats.hp - amount);
+    const actualDamage = Math.max(
+      1,
+      Math.floor(value - stats.defense)
+    );
+
+    stats.hp = Math.max(0, stats.hp - actualDamage);
 
     if (stats.hp <= 0) {
-      isDead = true;
+      dead = true;
     }
 
     updateUI();
-    return isDead;
+    return actualDamage;
   }
 
   function heal(amount) {
-    if (!Number.isFinite(amount) || amount <= 0 || isDead) return;
+    const value = Number(amount);
+
+    if (!Number.isFinite(value) || value <= 0 || dead) {
+      return false;
+    }
+
+    const previousHP = stats.hp;
 
     stats.hp = Math.min(
       stats.maxHp,
-      stats.hp + amount
+      stats.hp + Math.floor(value)
     );
 
     updateUI();
+    return stats.hp - previousHP;
   }
 
-  function revive() {
-    stats.hp = stats.maxHp;
-    isDead = false;
+  function revive(health = 50) {
+    const value = Number(health);
+
+    if (!Number.isFinite(value) || value <= 0) {
+      return false;
+    }
+
+    dead = false;
+    stats.hp = Math.min(
+      stats.maxHp,
+      Math.floor(value)
+    );
+
     updateUI();
+    return true;
+  }
+
+  function getStats() {
+    return {
+      ...stats,
+      isDead: dead
+    };
   }
 
   function saveGame() {
     try {
-      const saveData = {
-        version: 1,
-        stats: { ...stats },
-        isDead
-      };
-
       localStorage.setItem(
-        SAVE_KEY,
-        JSON.stringify(saveData)
+        STORAGE_KEY,
+        JSON.stringify({
+          version: 2,
+          stats,
+          dead
+        })
       );
 
       return true;
     } catch (error) {
-      console.error("Gagal menyimpan game:", error);
+      console.error("Gagal menyimpan player stats:", error);
       return false;
     }
   }
 
   function loadGame() {
     try {
-      const savedText = localStorage.getItem(SAVE_KEY);
+      const raw = localStorage.getItem(STORAGE_KEY);
 
-      if (!savedText) return false;
+      if (!raw) return false;
 
-      const savedData = JSON.parse(savedText);
+      const saved = JSON.parse(raw);
 
       if (
-        !savedData ||
-        savedData.version !== 1 ||
-        !savedData.stats
+        !saved ||
+        saved.version !== 2 ||
+        !saved.stats
       ) {
         return false;
       }
 
-      const loaded = savedData.stats;
-
-      const requiredValues = [
+      const fields = [
         "level",
         "hp",
         "maxHp",
         "xp",
         "xpToNextLevel",
-        "gold"
+        "gold",
+        "attack",
+        "defense"
       ];
 
-      for (const key of requiredValues) {
-        if (
-          !Number.isFinite(loaded[key]) ||
-          loaded[key] < 0
-        ) {
+      for (const field of fields) {
+        const value = Number(saved.stats[field]);
+
+        if (!Number.isFinite(value) || value < 0) {
           return false;
         }
       }
 
       if (
-        loaded.level < 1 ||
-        loaded.maxHp < 1 ||
-        loaded.xpToNextLevel < 1 ||
-        loaded.hp > loaded.maxHp ||
-        loaded.xp >= loaded.xpToNextLevel
+        saved.stats.level < 1 ||
+        saved.stats.maxHp < 1 ||
+        saved.stats.hp > saved.stats.maxHp ||
+        saved.stats.xp >= saved.stats.xpToNextLevel ||
+        saved.stats.xpToNextLevel < 1
       ) {
         return false;
       }
 
-      for (const key of requiredValues) {
-        stats[key] = loaded[key];
+      for (const field of fields) {
+        stats[field] = saved.stats[field];
       }
 
-      isDead = savedData.isDead === true;
-
-      if (isDead) {
-        stats.hp = 0;
-      }
-
+      dead = Boolean(saved.dead);
       updateUI();
+
       return true;
     } catch (error) {
-      console.error("Gagal memuat game:", error);
+      console.error("Gagal memuat player stats:", error);
       return false;
     }
   }
 
   function deleteSave() {
     try {
-      localStorage.removeItem(SAVE_KEY);
+      localStorage.removeItem(STORAGE_KEY);
       return true;
     } catch (error) {
-      console.error("Gagal menghapus save:", error);
+      console.error("Gagal menghapus player stats:", error);
       return false;
     }
   }
 
-  function updateUI() {
-    const hpText = document.getElementById("hp-text");
-    const hpBar = document.getElementById("hp-bar");
-    const xpText = document.getElementById("xp-text");
-    const xpBar = document.getElementById("xp-bar");
-    const levelText = document.getElementById("level-text");
-    const goldText = document.getElementById("gold-text");
-
-    if (hpText) {
-      hpText.textContent = isDead
-        ? "HP 0 — KALAH"
-        : `HP ${stats.hp}/${stats.maxHp}`;
-    }
-
-    if (hpBar) {
-      const hpPercent =
-        (stats.hp / stats.maxHp) * 100;
-
-      hpBar.style.width = `${hpPercent}%`;
-    }
-
-    if (xpText) {
-      xpText.textContent =
-        `XP ${stats.xp}/${stats.xpToNextLevel}`;
-    }
-
-    if (xpBar) {
-      const xpPercent =
-        (stats.xp / stats.xpToNextLevel) * 100;
-
-      xpBar.style.width = `${xpPercent}%`;
-    }
-
-    if (levelText) {
-      levelText.textContent =
-        `Level ${stats.level}`;
-    }
-
-    if (goldText) {
-      goldText.textContent =
-        `Gold: ${stats.gold}`;
-    }
+  function isDead() {
+    return dead;
   }
 
   updateUI();
 
   return {
-    stats,
     addXP,
     addGold,
     spendGold,
     takeDamage,
     heal,
     revive,
-    updateUI,
+    getStats,
     saveGame,
     loadGame,
     deleteSave,
-    isDead: () => isDead
+    updateUI,
+    isDead
   };
-}
+      }
