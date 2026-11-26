@@ -25,6 +25,18 @@ export function buildWorld(
   const mountain = material("mountain", "#555B59");
   const path = material("path", "#A18B68");
 
+  // Material dungeon
+  const dungeonStone = material("dungeon-stone", "#35383B");
+  const dungeonFloor = material("dungeon-floor", "#25282D");
+  const dungeonTrim = material("dungeon-trim", "#77716A");
+
+  const torchMaterial = new BABYLON.StandardMaterial(
+    "dungeon-torch-material",
+    scene
+  );
+  torchMaterial.diffuseColor = new BABYLON.Color3(1, 0.35, 0.05);
+  torchMaterial.emissiveColor = new BABYLON.Color3(1, 0.18, 0.02);
+
   const npcClothes = [
     material("npc-clothes-1", "#315D9B"),
     material("npc-clothes-2", "#8B4936"),
@@ -260,46 +272,299 @@ export function buildWorld(
     rock.material = stone;
   }
 
+  // =====================================
+  // DUNGEON KUNO
+  // =====================================
+
+  const dungeonX = 65;
+  const dungeonZ = 35;
+
+  // Lantai dungeon
+  const dungeonGround = BABYLON.MeshBuilder.CreateGround(
+    "ancient-dungeon-ground",
+    {
+      width: 34,
+      height: 30
+    },
+    scene
+  );
+
+  dungeonGround.position.set(dungeonX, 0.08, dungeonZ);
+  dungeonGround.material = dungeonFloor;
+
+  // Dinding belakang
+  const backWall = BABYLON.MeshBuilder.CreateBox(
+    "dungeon-back-wall",
+    {
+      width: 34,
+      height: 9,
+      depth: 2
+    },
+    scene
+  );
+
+  backWall.position.set(dungeonX, 4.5, dungeonZ + 15);
+  backWall.material = dungeonStone;
+
+  // Dinding kiri
+  const leftWall = BABYLON.MeshBuilder.CreateBox(
+    "dungeon-left-wall",
+    {
+      width: 2,
+      height: 9,
+      depth: 30
+    },
+    scene
+  );
+
+  leftWall.position.set(dungeonX - 17, 4.5, dungeonZ);
+  leftWall.material = dungeonStone;
+
+  // Dinding kanan
+  const rightWall = BABYLON.MeshBuilder.CreateBox(
+    "dungeon-right-wall",
+    {
+      width: 2,
+      height: 9,
+      depth: 30
+    },
+    scene
+  );
+
+  rightWall.position.set(dungeonX + 17, 4.5, dungeonZ);
+  rightWall.material = dungeonStone;
+
+  // Dinding depan kiri dan kanan
+  for (let i = 0; i < 2; i++) {
+    const frontWall = BABYLON.MeshBuilder.CreateBox(
+      "dungeon-front-wall-" + i,
+      {
+        width: 11,
+        height: 9,
+        depth: 2
+      },
+      scene
+    );
+
+    frontWall.position.set(
+      dungeonX + (i === 0 ? -11.5 : 11.5),
+      4.5,
+      dungeonZ - 15
+    );
+
+    frontWall.material = dungeonStone;
+  }
+
+  // Pilar dungeon
+  for (let i = 0; i < 4; i++) {
+    const side = i < 2 ? -1 : 1;
+    const positionZ = i % 2 === 0 ? -11 : 11;
+
+    const pillar = BABYLON.MeshBuilder.CreateBox(
+      "dungeon-pillar-" + i,
+      {
+        width: 2,
+        height: 9,
+        depth: 2
+      },
+      scene
+    );
+
+    pillar.position.set(
+      dungeonX + side * 13,
+      4.5,
+      dungeonZ + positionZ
+    );
+
+    pillar.material = dungeonTrim;
+  }
+
+  // Gerbang utama dungeon
+  const gateLeft = BABYLON.MeshBuilder.CreateBox(
+    "dungeon-gate-left",
+    {
+      width: 3,
+      height: 9,
+      depth: 3
+    },
+    scene
+  );
+
+  gateLeft.position.set(dungeonX - 6, 4.5, dungeonZ - 15);
+  gateLeft.material = dungeonTrim;
+
+  const gateRight = BABYLON.MeshBuilder.CreateBox(
+    "dungeon-gate-right",
+    {
+      width: 3,
+      height: 9,
+      depth: 3
+    },
+    scene
+  );
+
+  gateRight.position.set(dungeonX + 6, 4.5, dungeonZ - 15);
+  gateRight.material = dungeonTrim;
+
+  const gateTop = BABYLON.MeshBuilder.CreateBox(
+    "dungeon-gate-top",
+    {
+      width: 15,
+      height: 2,
+      depth: 3
+    },
+    scene
+  );
+
+  gateTop.position.set(dungeonX, 9, dungeonZ - 15);
+  gateTop.material = dungeonTrim;
+
+  // Penanda pintu masuk
+  const entranceMarker = BABYLON.MeshBuilder.CreateBox(
+    "dungeon-entrance-marker",
+    {
+      width: 9,
+      height: 6,
+      depth: 0.5
+    },
+    scene
+  );
+
+  entranceMarker.position.set(
+    dungeonX,
+    3,
+    dungeonZ - 15
+  );
+
+  entranceMarker.isPickable = true;
+  entranceMarker.visibility = 0.01;
+  entranceMarker.metadata = {
+    dungeonEntrance: true,
+    dungeonName: "Dungeon Kuno"
+  };
+
+  // Obor dungeon
+  for (let i = 0; i < 4; i++) {
+    const side = i % 2 === 0 ? -1 : 1;
+    const positionZ = i < 2 ? -8 : 8;
+
+    const torch = BABYLON.MeshBuilder.CreateCylinder(
+      "dungeon-torch-" + i,
+      {
+        height: 2,
+        diameter: 0.25
+      },
+      scene
+    );
+
+    torch.position.set(
+      dungeonX + side * 12,
+      2.5,
+      dungeonZ + positionZ
+    );
+
+    torch.material = dungeonTrim;
+
+    const flame = BABYLON.MeshBuilder.CreateSphere(
+      "dungeon-flame-" + i,
+      {
+        diameter: 0.8,
+        segments: 6
+      },
+      scene
+    );
+
+    flame.position.set(
+      dungeonX + side * 12,
+      3.8,
+      dungeonZ + positionZ
+    );
+
+    flame.material = torchMaterial;
+
+    const torchLight = new BABYLON.PointLight(
+      "dungeon-light-" + i,
+      new BABYLON.Vector3(
+        dungeonX + side * 12,
+        4,
+        dungeonZ + positionZ
+      ),
+      scene
+    );
+
+    torchLight.diffuse = new BABYLON.Color3(1, 0.45, 0.12);
+    torchLight.intensity = 0.6;
+    torchLight.range = 12;
+  }
+
+  // Batu hiasan dungeon
+  for (let i = 0; i < 10; i++) {
+    const rock = BABYLON.MeshBuilder.CreateBox(
+      "dungeon-debris-" + i,
+      {
+        width: 1 + (i % 3),
+        height: 0.5 + (i % 2),
+        depth: 1 + (i % 2)
+      },
+      scene
+    );
+
+    rock.position.set(
+      dungeonX - 13 + (i % 5) * 6,
+      0.4,
+      dungeonZ - 10 + Math.floor(i / 5) * 18
+    );
+
+    rock.rotation.y = i * 0.5;
+    rock.material = stone;
+  }
+
   // Interaksi pohon dan NPC
-  const pointerObserver = scene.onPointerObservable.add((pointerInfo) => {
-    if (
-      pointerInfo.type !== BABYLON.PointerEventTypes.POINTERDOWN
-    ) {
-      return;
+  const pointerObserver = scene.onPointerObservable.add(
+    (pointerInfo) => {
+      if (
+        pointerInfo.type !== BABYLON.PointerEventTypes.POINTERDOWN
+      ) {
+        return;
+      }
+
+      const pick = scene.pick(
+        scene.pointerX,
+        scene.pointerY
+      );
+
+      if (!pick || !pick.hit || !pick.pickedMesh) {
+        return;
+      }
+
+      const selected = pick.pickedMesh;
+      const metadata = selected.metadata;
+
+      if (!metadata) return;
+
+      // Bicara dengan NPC
+      if (metadata.npc) {
+        onNpcTalk(metadata.npcName, metadata.dialogue);
+        return;
+      }
+
+      // Mengumpulkan Wood
+      if (
+        metadata.collectable &&
+        !metadata.collected
+      ) {
+        metadata.collected = true;
+
+        const amount = metadata.woodAmount;
+        onWoodCollected(amount);
+
+        selected.dispose();
+      }
     }
-
-    const pick = scene.pick(scene.pointerX, scene.pointerY);
-
-    if (!pick || !pick.hit || !pick.pickedMesh) {
-      return;
-    }
-
-    const selected = pick.pickedMesh;
-    const metadata = selected.metadata;
-
-    if (!metadata) return;
-
-    // Bicara dengan NPC
-    if (metadata.npc) {
-      onNpcTalk(metadata.npcName, metadata.dialogue);
-      return;
-    }
-
-    // Mengumpulkan Wood
-    if (
-      metadata.collectable &&
-      !metadata.collected
-    ) {
-      metadata.collected = true;
-
-      const amount = metadata.woodAmount;
-      onWoodCollected(amount);
-
-      selected.dispose();
-    }
-  });
+  );
 
   return function disposeWorldInteraction() {
     scene.onPointerObservable.remove(pointerObserver);
   };
-}
+      }
+  
