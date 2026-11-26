@@ -18,7 +18,16 @@ export function createCombatSystem(
     Goblin: 5,
     Skeleton: 8,
     "Dire Wolf": 10,
-    Orc: 15
+    Orc: 15,
+    "Ancient Golem": 250
+  };
+
+  const xpRewards = {
+    Goblin: 25,
+    Skeleton: 25,
+    "Dire Wolf": 25,
+    Orc: 40,
+    "Ancient Golem": 300
   };
 
   const goblinMaterial = new BABYLON.StandardMaterial(
@@ -64,9 +73,111 @@ export function createCombatSystem(
       name: "Goblin",
       mesh: goblin,
       hp: 100,
+      maxHp: 100,
       alive: true
     });
   }
+
+  // Boss HP Bar
+  const bossBar = document.createElement("div");
+
+  bossBar.style.cssText = `
+    position: fixed;
+    top: 18px;
+    left: 50%;
+    transform: translateX(-50%);
+    width: min(82%, 420px);
+    padding: 10px;
+    background: rgba(15, 10, 10, 0.9);
+    border: 2px solid #9b6b35;
+    border-radius: 10px;
+    color: white;
+    font-family: Arial, sans-serif;
+    text-align: center;
+    z-index: 9999;
+    display: none;
+    pointer-events: none;
+  `;
+
+  const bossName = document.createElement("div");
+  bossName.textContent = "ANCIENT GOLEM";
+  bossName.style.cssText = `
+    font-size: 16px;
+    font-weight: bold;
+    margin-bottom: 7px;
+    color: #f0c27b;
+    letter-spacing: 2px;
+  `;
+
+  const bossTrack = document.createElement("div");
+  bossTrack.style.cssText = `
+    width: 100%;
+    height: 15px;
+    background: #333;
+    border: 1px solid #777;
+    border-radius: 8px;
+    overflow: hidden;
+  `;
+
+  const bossFill = document.createElement("div");
+  bossFill.style.cssText = `
+    width: 100%;
+    height: 100%;
+    background: #b52b20;
+    transition: width 0.15s;
+  `;
+
+  const bossHealthText = document.createElement("div");
+  bossHealthText.style.cssText = `
+    margin-top: 5px;
+    font-size: 12px;
+    color: #eee;
+  `;
+
+  bossTrack.appendChild(bossFill);
+  bossBar.appendChild(bossName);
+  bossBar.appendChild(bossTrack);
+  bossBar.appendChild(bossHealthText);
+  document.body.appendChild(bossBar);
+
+  function updateBossBar() {
+    if (disposed || !player || !enemyAI) {
+      bossBar.style.display = "none";
+      return;
+    }
+
+    const boss = enemyAI.getEnemies().find(
+      enemy => enemy.name === "Ancient Golem"
+    );
+
+    if (!boss || !boss.alive || !boss.mesh || boss.mesh.isDisposed()) {
+      bossBar.style.display = "none";
+      return;
+    }
+
+    const distance = BABYLON.Vector3.Distance(
+      player.position,
+      boss.mesh.position
+    );
+
+    if (distance > 35) {
+      bossBar.style.display = "none";
+      return;
+    }
+
+    const percentage = Math.max(
+      0,
+      Math.min(100, (boss.health / boss.maxHealth) * 100)
+    );
+
+    bossBar.style.display = "block";
+    bossFill.style.width = percentage + "%";
+    bossHealthText.textContent =
+      `${Math.ceil(boss.health)} / ${boss.maxHealth} HP`;
+  }
+
+  const bossBarObserver =
+    scene.onBeforeRenderObservable.add(updateBossBar);
 
   function getAttackDamage() {
     const baseDamage = 25;
@@ -99,6 +210,9 @@ export function createCombatSystem(
         { name: "Orc Token", type: "Quest", chance: 0.7 },
         { name: "Iron Ore", type: "Material", chance: 0.5 },
         { name: "Health Potion", type: "Consumable", chance: 0.3 }
+      ],
+      "Ancient Golem": [
+        { name: "Ancient Core", type: "Quest", chance: 1 }
       ]
     };
 
@@ -121,7 +235,7 @@ export function createCombatSystem(
     }
 
     if (playerStats) {
-      playerStats.addXP(enemy.name === "Orc" ? 40 : 25);
+      playerStats.addXP(xpRewards[enemy.name] || 25);
 
       const reward = goldRewards[enemy.name] || 0;
 
@@ -135,6 +249,8 @@ export function createCombatSystem(
     }
 
     giveLoot(enemy.name);
+
+    updateBossBar();
   }
 
   function getAllTargets() {
@@ -234,6 +350,7 @@ export function createCombatSystem(
           !enemy.mesh.isDisposed()
         ) {
           enemy.mesh.scaling.setAll(
+            enemy.isBoss ? 1 :
             enemy.name === "Orc" ? 1.25 :
             enemy.name === "Dire Wolf" ? 0.8 : 0.9
           );
@@ -244,6 +361,8 @@ export function createCombatSystem(
         defeatEnemy(enemy);
       }
     }
+
+    updateBossBar();
   }
 
   attackButton.addEventListener("click", attack);
@@ -254,6 +373,11 @@ export function createCombatSystem(
     disposed = true;
 
     attackButton.removeEventListener("click", attack);
+    scene.onBeforeRenderObservable.remove(bossBarObserver);
+
+    if (bossBar.parentNode) {
+      bossBar.parentNode.removeChild(bossBar);
+    }
 
     for (const goblin of goblins) {
       if (goblin.mesh && !goblin.mesh.isDisposed()) {
@@ -263,5 +387,5 @@ export function createCombatSystem(
 
     goblins.length = 0;
   };
-          }
-        
+  }
+          
