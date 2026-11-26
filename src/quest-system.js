@@ -1,4 +1,6 @@
 
+const QUEST_SAVE_KEY = "the-lost-world-quests";
+
 export function createQuestSystem(playerStats, inventory) {
   const quests = [
     {
@@ -66,6 +68,86 @@ export function createQuestSystem(playerStats, inventory) {
     };
   }
 
+  function saveQuests() {
+    try {
+      const data = quests.map(quest => ({
+        id: quest.id,
+        progress: quest.progress,
+        accepted: quest.accepted,
+        completed: quest.completed,
+        claimed: quest.claimed
+      }));
+
+      localStorage.setItem(
+        QUEST_SAVE_KEY,
+        JSON.stringify({
+          version: 1,
+          quests: data
+        })
+      );
+
+      return true;
+    } catch (error) {
+      console.error("Gagal menyimpan quest:", error);
+      return false;
+    }
+  }
+
+  function loadQuests() {
+    try {
+      const savedData = localStorage.getItem(QUEST_SAVE_KEY);
+
+      if (!savedData) return false;
+
+      const data = JSON.parse(savedData);
+
+      if (!data || !Array.isArray(data.quests)) {
+        return false;
+      }
+
+      data.quests.forEach(savedQuest => {
+        const quest = quests.find(
+          item => item.id === savedQuest.id
+        );
+
+        if (!quest) return;
+
+        const progress = Number(savedQuest.progress);
+
+        quest.progress = Number.isFinite(progress)
+          ? Math.max(0, Math.min(quest.required, progress))
+          : 0;
+
+        quest.accepted = savedQuest.accepted === true;
+        quest.claimed = savedQuest.claimed === true;
+
+        quest.completed =
+          savedQuest.completed === true ||
+          quest.progress >= quest.required;
+
+        if (quest.claimed) {
+          quest.accepted = true;
+          quest.completed = true;
+        }
+      });
+
+      return true;
+    } catch (error) {
+      console.error("Gagal memuat quest:", error);
+      return false;
+    }
+  }
+
+  function deleteQuestSave() {
+    try {
+      localStorage.removeItem(QUEST_SAVE_KEY);
+      return true;
+    } catch (error) {
+      console.error("Gagal menghapus save quest:", error);
+      return false;
+    }
+  }
+
   function acceptQuest(id) {
     const quest = quests.find(item => item.id === id);
 
@@ -74,11 +156,15 @@ export function createQuestSystem(playerStats, inventory) {
     }
 
     quest.accepted = true;
+    saveQuests();
+
     return true;
   }
 
   function addProgress(target, amount = 1) {
     if (amount <= 0) return;
+
+    let changed = false;
 
     quests.forEach(quest => {
       if (
@@ -95,8 +181,14 @@ export function createQuestSystem(playerStats, inventory) {
         if (quest.progress >= quest.required) {
           quest.completed = true;
         }
+
+        changed = true;
       }
     });
+
+    if (changed) {
+      saveQuests();
+    }
   }
 
   function claimReward(id) {
@@ -121,6 +213,8 @@ export function createQuestSystem(playerStats, inventory) {
     }
 
     quest.claimed = true;
+    saveQuests();
+
     return true;
   }
 
@@ -136,7 +230,9 @@ export function createQuestSystem(playerStats, inventory) {
     getActiveQuests,
     acceptQuest,
     addProgress,
-    claimReward
+    claimReward,
+    saveQuests,
+    loadQuests,
+    deleteQuestSave
   };
-      }
-      
+}
