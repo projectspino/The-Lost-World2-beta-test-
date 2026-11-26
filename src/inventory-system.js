@@ -15,6 +15,8 @@ export function createInventory() {
     if (
       typeof name !== "string" ||
       !name.trim() ||
+      typeof type !== "string" ||
+      !type.trim() ||
       !Number.isFinite(quantity) ||
       quantity <= 0 ||
       !Number.isInteger(quantity)
@@ -29,10 +31,7 @@ export function createInventory() {
     if (existingItem) {
       existingItem.quantity += quantity;
 
-      if (onItemAdded) {
-        onItemAdded(name, quantity);
-      }
-
+      if (onItemAdded) onItemAdded(name, quantity);
       return true;
     }
 
@@ -47,24 +46,26 @@ export function createInventory() {
       type
     });
 
-    if (onItemAdded) {
-      onItemAdded(name, quantity);
-    }
-
+    if (onItemAdded) onItemAdded(name, quantity);
     return true;
   }
 
-  function removeItem(name, quantity = 1) {
+  // type bersifat opsional agar pemanggilan lama tetap kompatibel.
+  function removeItem(name, quantity = 1, type = null) {
     if (
+      typeof name !== "string" ||
+      !name.trim() ||
       !Number.isFinite(quantity) ||
       quantity <= 0 ||
-      !Number.isInteger(quantity)
+      !Number.isInteger(quantity) ||
+      (type !== null && typeof type !== "string")
     ) {
       return false;
     }
 
-    const index = items.findIndex(
-      item => item.name === name
+    const index = items.findIndex(item =>
+      item.name === name &&
+      (type === null || item.type === type)
     );
 
     if (index === -1 || items[index].quantity < quantity) {
@@ -88,8 +89,11 @@ export function createInventory() {
     return items.length;
   }
 
-  function hasItem(name) {
-    return items.some(item => item.name === name);
+  function hasItem(name, type = null) {
+    return items.some(item =>
+      item.name === name &&
+      (type === null || item.type === type)
+    );
   }
 
   function clearInventory() {
@@ -98,14 +102,12 @@ export function createInventory() {
 
   function saveInventory() {
     try {
-      const saveData = {
-        version: 1,
-        items: getItems()
-      };
-
       localStorage.setItem(
         INVENTORY_SAVE_KEY,
-        JSON.stringify(saveData)
+        JSON.stringify({
+          version: 1,
+          items: getItems()
+        })
       );
 
       return true;
@@ -117,10 +119,7 @@ export function createInventory() {
 
   function loadInventory() {
     try {
-      const savedText = localStorage.getItem(
-        INVENTORY_SAVE_KEY
-      );
-
+      const savedText = localStorage.getItem(INVENTORY_SAVE_KEY);
       if (!savedText) return false;
 
       const savedData = JSON.parse(savedText);
@@ -142,6 +141,7 @@ export function createInventory() {
           typeof item.name !== "string" ||
           !item.name.trim() ||
           typeof item.type !== "string" ||
+          !item.type.trim() ||
           !Number.isFinite(item.quantity) ||
           !Number.isInteger(item.quantity) ||
           item.quantity <= 0
@@ -191,4 +191,4 @@ export function createInventory() {
     loadInventory,
     deleteInventorySave
   };
-}
+  }
