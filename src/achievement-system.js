@@ -1,35 +1,30 @@
+
+const ACHIEVEMENT_SAVE_KEY = "the-lost-world-achievements";
+
 const DEFAULT_ACHIEVEMENTS = [
   {
     id: "first_blood",
     name: "First Blood",
     description: "Kalahkan monster pertama.",
-    target: 1,
-    progress: 0,
-    completed: false
+    target: 1
   },
   {
     id: "monster_hunter",
     name: "Monster Hunter",
     description: "Kalahkan 50 monster.",
-    target: 50,
-    progress: 0,
-    completed: false
+    target: 50
   },
   {
     id: "wood_collector",
     name: "Wood Collector",
     description: "Kumpulkan 100 Wood.",
-    target: 100,
-    progress: 0,
-    completed: false
+    target: 100
   },
   {
     id: "dungeon_explorer",
     name: "Dungeon Explorer",
     description: "Selesaikan satu dungeon.",
-    target: 1,
-    progress: 0,
-    completed: false
+    target: 1
   }
 ];
 
@@ -39,15 +34,20 @@ export class AchievementSystem {
 
     for (const achievement of DEFAULT_ACHIEVEMENTS) {
       this.achievements.set(achievement.id, {
-        ...achievement
+        ...achievement,
+        progress: 0,
+        completed: false
       });
     }
   }
 
   addAchievement(data) {
     if (
-      !data?.id ||
-      !data.name ||
+      !data ||
+      typeof data.id !== "string" ||
+      !data.id.trim() ||
+      typeof data.name !== "string" ||
+      !data.name.trim() ||
       !Number.isFinite(data.target) ||
       data.target <= 0 ||
       this.achievements.has(data.id)
@@ -69,39 +69,34 @@ export class AchievementSystem {
 
   addProgress(id, amount = 1) {
     const achievement = this.achievements.get(id);
+    const value = Number(amount);
 
     if (
       !achievement ||
       achievement.completed ||
-      !Number.isFinite(amount) ||
-      amount <= 0
+      !Number.isFinite(value) ||
+      value <= 0
     ) {
       return null;
     }
 
     achievement.progress = Math.min(
       achievement.target,
-      achievement.progress + amount
+      achievement.progress + value
     );
 
     if (achievement.progress >= achievement.target) {
       achievement.completed = true;
-
-      return {
-        completed: true,
-        achievement: { ...achievement }
-      };
     }
 
     return {
-      completed: false,
+      completed: achievement.completed,
       achievement: { ...achievement }
     };
   }
 
   getAchievement(id) {
     const achievement = this.achievements.get(id);
-
     return achievement ? { ...achievement } : null;
   }
 
@@ -121,10 +116,78 @@ export class AchievementSystem {
     return this.getCompleted().length;
   }
 
+  save() {
+    try {
+      const data = {
+        version: 1,
+        achievements: this.getAll()
+      };
+
+      localStorage.setItem(
+        ACHIEVEMENT_SAVE_KEY,
+        JSON.stringify(data)
+      );
+
+      return true;
+    } catch (error) {
+      console.error("Gagal menyimpan achievement:", error);
+      return false;
+    }
+  }
+
+  load() {
+    try {
+      const raw = localStorage.getItem(ACHIEVEMENT_SAVE_KEY);
+      if (!raw) return false;
+
+      const data = JSON.parse(raw);
+
+      if (
+        !data ||
+        data.version !== 1 ||
+        !Array.isArray(data.achievements)
+      ) {
+        return false;
+      }
+
+      for (const saved of data.achievements) {
+        if (!saved || typeof saved.id !== "string") continue;
+
+        const current = this.achievements.get(saved.id);
+        if (!current) continue;
+
+        const progress = Number(saved.progress);
+
+        if (!Number.isFinite(progress)) continue;
+
+        current.progress = Math.max(
+          0,
+          Math.min(current.target, progress)
+        );
+
+        current.completed =
+          current.progress >= current.target;
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Gagal memuat achievement:", error);
+      return false;
+    }
+  }
+
   reset() {
     for (const achievement of this.achievements.values()) {
       achievement.progress = 0;
       achievement.completed = false;
     }
+
+    try {
+      localStorage.removeItem(ACHIEVEMENT_SAVE_KEY);
+      return true;
+    } catch (error) {
+      console.error("Gagal mereset achievement:", error);
+      return false;
+    }
   }
-  }
+}
