@@ -82,6 +82,33 @@ const settings = {
   fps: Number(localStorage.getItem("fps") || 60)
 };
 
+// =====================================
+// SAVE & LOAD
+// =====================================
+
+function saveAllGameData() {
+  if (!playerStats || !inventory) {
+    return false;
+  }
+
+  const statsSaved = playerStats.saveGame();
+  const inventorySaved = inventory.saveInventory();
+
+  const success = statsSaved && inventorySaved;
+
+  console.log(
+    success
+      ? "Game berhasil disimpan!"
+      : "Gagal menyimpan sebagian progres game."
+  );
+
+  return success;
+}
+
+// =====================================
+// LOADING SCREEN
+// =====================================
+
 function showLoading() {
   app.innerHTML = `
     <div class="screen loading-screen" id="loading-screen">
@@ -99,6 +126,10 @@ function showLoading() {
 
   setTimeout(showMainMenu, 2400);
 }
+
+// =====================================
+// MAIN MENU
+// =====================================
 
 function showMainMenu() {
   app.innerHTML = `
@@ -129,6 +160,10 @@ function showMainMenu() {
   document.getElementById("settings-button").onclick =
     showSettings;
 }
+
+// =====================================
+// CHARACTER SELECT
+// =====================================
 
 function showCharacterSelect() {
   const cards = characters.map(character => `
@@ -178,6 +213,10 @@ function showCharacterSelect() {
   document.getElementById("start-button").onclick = startGame;
   document.getElementById("back-button").onclick = showMainMenu;
 }
+
+// =====================================
+// SETTINGS
+// =====================================
 
 function showSettings() {
   app.innerHTML = `
@@ -250,6 +289,10 @@ function showSettings() {
   document.getElementById("back-button").onclick = showMainMenu;
 }
 
+// =====================================
+// GAME HUD STYLES
+// =====================================
+
 function addGameHudStyles() {
   if (document.getElementById("game-hud-styles")) return;
 
@@ -309,6 +352,14 @@ function addGameHudStyles() {
       touch-action: manipulation;
     }
 
+    #save-game,
+    #exit-game {
+      min-height: 38px;
+      padding: 8px 12px;
+      border-radius: 8px;
+      font-weight: bold;
+    }
+
     .npc-dialog {
       position: absolute;
       left: 50%;
@@ -344,6 +395,10 @@ function addGameHudStyles() {
 
   document.head.appendChild(style);
 }
+
+// =====================================
+// NPC DIALOG
+// =====================================
 
 function showNpcDialog(name, dialogue) {
   const oldDialog = document.getElementById("npc-dialog");
@@ -429,6 +484,10 @@ function showNpcDialog(name, dialogue) {
   document.getElementById("game-container").appendChild(dialog);
 }
 
+// =====================================
+// START GAME
+// =====================================
+
 function startGame() {
   addGameHudStyles();
 
@@ -453,7 +512,10 @@ function startGame() {
           </div>
         </div>
 
-        <button id="exit-game">MENU</button>
+        <div style="display:flex; gap:8px; align-items:flex-start;">
+          <button id="save-game">SAVE GAME</button>
+          <button id="exit-game">MENU</button>
+        </div>
       </div>
 
       <div class="game-controls">
@@ -526,16 +588,41 @@ function startGame() {
   player.material = playerMaterial;
   camera.lockedTarget = player;
 
-  // Sistem statistik, inventori, dan quest.
+  // Buat statistik dan inventaris.
   playerStats = createPlayerStats();
   inventory = createInventory();
+
+  // Muat data yang tersimpan.
+  const statsLoaded = playerStats.loadGame();
+  const inventoryLoaded = inventory.loadInventory();
+
+  console.log(
+    statsLoaded
+      ? "Progres pemain berhasil dimuat."
+      : "Memulai progres pemain baru."
+  );
+
+  console.log(
+    inventoryLoaded
+      ? "Inventaris berhasil dimuat."
+      : "Menggunakan inventaris awal."
+  );
+
+  // Berikan item awal hanya jika belum ada data inventaris.
+  if (!inventoryLoaded) {
+    inventory.addItem("Health Potion", 2, "Consumable");
+    inventory.addItem("Wood", 5, "Material");
+    inventory.addItem("Goblin Token", 1, "Quest");
+  }
+
+  // Quest.
   questSystem = createQuestSystem(playerStats, inventory);
 
-  // Sistem toko.
+  // Toko.
   shopSystem = createShopSystem(playerStats, inventory);
   shopUI = createShopUI(shopSystem, playerStats, inventory);
 
-  // Sistem perlengkapan.
+  // Equipment.
   equipmentSystem = createEquipmentSystem(inventory);
   equipmentUI = createEquipmentUI(equipmentSystem, inventory);
 
@@ -545,11 +632,7 @@ function startGame() {
     }
   });
 
-  inventory.addItem("Health Potion", 2, "Consumable");
-  inventory.addItem("Wood", 5, "Material");
-  inventory.addItem("Goblin Token", 1, "Quest");
-
-  // Dunia, NPC, pengumpulan Wood, dan pintu Dungeon.
+  // Dunia, NPC, Wood, dan Dungeon.
   disposeWorldInteraction = buildWorld(
     scene,
     (amount) => {
@@ -580,9 +663,11 @@ function startGame() {
     }
   );
 
+  // UI.
   disposeInventoryUI = createInventoryUI(inventory);
   disposeQuestUI = createQuestUI(questSystem);
 
+  // Kontrol pemain.
   const joystick = document.getElementById("joystick");
   const jumpButton = document.getElementById("jump-button");
 
@@ -594,6 +679,7 @@ function startGame() {
     jumpButton
   );
 
+  // Musuh.
   enemyAI = createEnemyAI(
     scene,
     player,
@@ -620,6 +706,7 @@ function startGame() {
     }
   );
 
+  // Combat.
   const attackButton = document.getElementById("attack-button");
 
   disposeCombatSystem = createCombatSystem(
@@ -633,12 +720,25 @@ function startGame() {
     equipmentSystem
   );
 
+  // Tombol equipment.
   document.getElementById("equipment-button").onclick = () => {
     if (equipmentUI) {
       equipmentUI.open();
     }
   };
 
+  // Tombol simpan.
+  document.getElementById("save-game").onclick = () => {
+    const saved = saveAllGameData();
+
+    if (saved) {
+      alert("Progres game berhasil disimpan!");
+    } else {
+      alert("Progres game gagal disimpan.");
+    }
+  };
+
+  // Render game.
   engine.runRenderLoop(() => {
     if (scene) {
       scene.render();
@@ -650,13 +750,24 @@ function startGame() {
   document.getElementById("exit-game").onclick = exitGame;
 }
 
+// =====================================
+// RESIZE
+// =====================================
+
 function resizeEngine() {
   if (engine) {
     engine.resize();
   }
 }
 
+// =====================================
+// EXIT GAME
+// =====================================
+
 function exitGame() {
+  // Simpan sebelum sistem game dihentikan.
+  saveAllGameData();
+
   if (disposePlayerController) {
     disposePlayerController();
     disposePlayerController = null;
@@ -703,7 +814,10 @@ function exitGame() {
   window.removeEventListener("resize", resizeEngine);
 
   const dialog = document.getElementById("npc-dialog");
-  if (dialog) dialog.remove();
+
+  if (dialog) {
+    dialog.remove();
+  }
 
   if (engine) {
     engine.stopRenderLoop();
@@ -721,5 +835,9 @@ function exitGame() {
   showMainMenu();
 }
 
+// =====================================
+// INITIALIZE
+// =====================================
+
 showLoading();
-          
+    
