@@ -549,6 +549,7 @@ function startGame() {
   inventory.addItem("Wood", 5, "Material");
   inventory.addItem("Goblin Token", 1, "Quest");
 
+  // Dunia, NPC, pengumpulan Wood, dan pintu Dungeon.
   disposeWorldInteraction = buildWorld(
     scene,
     (amount) => {
@@ -566,7 +567,17 @@ function startGame() {
         console.log("Inventori penuh!");
       }
     },
-    showNpcDialog
+    showNpcDialog,
+    () => {
+      if (!player) return;
+
+      player.position.set(65, 1, 27);
+
+      showNpcDialog(
+        "Dungeon Kuno",
+        "Kamu telah memasuki Dungeon Kuno. Jelajahi tempat ini dan bersiaplah menghadapi tantangan!"
+      );
+    }
   );
 
   disposeInventoryUI = createInventoryUI(inventory);
@@ -707,11 +718,8 @@ function exitGame() {
   inventory = null;
   questSystem = null;
 
-  const oldStyles = document.getElementById("game-hud-styles");
-  if (oldStyles) oldStyles.remove();
-
   showMainMenu();
 }
 
 showLoading();
-      
+          
