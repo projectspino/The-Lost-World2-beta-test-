@@ -5,7 +5,7 @@ const RECIPES = [
     name: "Wooden Sword",
     resultType: "Weapon",
     materials: [
-      { name: "Wood", amount: 5 }
+      { name: "Wood", type: "Material", amount: 5 }
     ],
     resultAmount: 1
   },
@@ -14,7 +14,7 @@ const RECIPES = [
     name: "Wooden Shield",
     resultType: "Armor",
     materials: [
-      { name: "Wood", amount: 8 }
+      { name: "Wood", type: "Material", amount: 8 }
     ],
     resultAmount: 1
   },
@@ -23,7 +23,7 @@ const RECIPES = [
     name: "Health Potion",
     resultType: "Consumable",
     materials: [
-      { name: "Herb", amount: 3 }
+      { name: "Herb", type: "Material", amount: 3 }
     ],
     resultAmount: 1
   }
@@ -39,34 +39,32 @@ export function createCraftingSystem(inventory) {
     throw new Error("Inventory tidak valid untuk crafting.");
   }
 
-  function getRecipes() {
-    return RECIPES.map(recipe => ({
-      ...recipe,
-      materials: recipe.materials.map(item => ({ ...item }))
-    }));
-  }
-
-  function getRecipe(id) {
-    const recipe = RECIPES.find(item => item.id === id);
-
-    if (!recipe) return null;
-
+  function copyRecipe(recipe) {
     return {
       ...recipe,
       materials: recipe.materials.map(item => ({ ...item }))
     };
   }
 
+  function getRecipes() {
+    return RECIPES.map(copyRecipe);
+  }
+
+  function getRecipe(id) {
+    const recipe = RECIPES.find(item => item.id === id);
+    return recipe ? copyRecipe(recipe) : null;
+  }
+
   function canCraft(id) {
     const recipe = RECIPES.find(item => item.id === id);
-
     if (!recipe) return false;
 
     const items = inventory.getItems();
 
     return recipe.materials.every(material => {
-      const found = items.find(
-        item => item.name === material.name
+      const found = items.find(item =>
+        item.name === material.name &&
+        item.type === material.type
       );
 
       return found && found.quantity >= material.amount;
@@ -84,12 +82,12 @@ export function createCraftingSystem(inventory) {
     }
 
     const items = inventory.getItems();
-
     const materialsToRemove = [];
 
     for (const material of recipe.materials) {
-      const found = items.find(
-        item => item.name === material.name
+      const found = items.find(item =>
+        item.name === material.name &&
+        item.type === material.type
       );
 
       if (!found || found.quantity < material.amount) {
@@ -101,8 +99,8 @@ export function createCraftingSystem(inventory) {
 
       materialsToRemove.push({
         name: material.name,
-        amount: material.amount,
-        type: found.type
+        type: material.type,
+        amount: material.amount
       });
     }
 
@@ -111,7 +109,8 @@ export function createCraftingSystem(inventory) {
     for (const material of materialsToRemove) {
       const removed = inventory.removeItem(
         material.name,
-        material.amount
+        material.amount,
+        material.type
       );
 
       if (!removed) {
@@ -167,4 +166,3 @@ export function createCraftingSystem(inventory) {
     craft
   };
 }
-  
