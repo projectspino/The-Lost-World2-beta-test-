@@ -5,6 +5,7 @@ const MONSTER_LOOT = {
     gold: [5, 15],
     drops: [
       { name: "Goblin Token", type: "Material", chance: 0.5 },
+      { name: "Wood", type: "Material", chance: 0.5 },
       { name: "Health Potion", type: "Consumable", chance: 0.1 }
     ]
   },
@@ -14,7 +15,17 @@ const MONSTER_LOOT = {
     gold: [10, 20],
     drops: [
       { name: "Bone", type: "Material", chance: 0.6 },
+      { name: "Old Coin", type: "Quest", chance: 0.3 },
       { name: "Health Potion", type: "Consumable", chance: 0.15 }
+    ]
+  },
+
+  "Dire Wolf": {
+    xp: 50,
+    gold: [10, 25],
+    drops: [
+      { name: "Wolf Pelt", type: "Material", chance: 0.8 },
+      { name: "Wolf Fang", type: "Material", chance: 0.5 }
     ]
   },
 
@@ -23,7 +34,17 @@ const MONSTER_LOOT = {
     gold: [15, 30],
     drops: [
       { name: "Orc Fang", type: "Material", chance: 0.5 },
+      { name: "Orc Token", type: "Quest", chance: 0.7 },
+      { name: "Iron Ore", type: "Material", chance: 0.5 },
       { name: "Health Potion", type: "Consumable", chance: 0.2 }
+    ]
+  },
+
+  "Ancient Golem": {
+    xp: 300,
+    gold: [200, 300],
+    drops: [
+      { name: "Ancient Core", type: "Quest", chance: 1 }
     ]
   }
 };
@@ -100,12 +121,10 @@ export function createLootSystem(playerStats, inventory) {
     try {
       playerStats.addXP(loot.xp);
 
-      const goldAdded = playerStats.addGold(gold);
-
-      if (goldAdded !== true) {
+      if (playerStats.addGold(gold) !== true) {
         return {
           success: false,
-          message: "Gold gagal ditambahkan. Hadiah belum diselesaikan."
+          message: "Gold gagal ditambahkan."
         };
       }
 
@@ -151,4 +170,4 @@ export function createLootSystem(playerStats, inventory) {
     getMonsterLoot,
     rewardMonster
   };
-        }
+}
