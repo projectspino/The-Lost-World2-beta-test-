@@ -1,4 +1,6 @@
 
+const EQUIPMENT_SAVE_KEY = "the-lost-world-equipment";
+
 const equipmentCatalog = [
   {
     id: "iron_sword",
@@ -75,6 +77,115 @@ export function createEquipmentSystem(inventory) {
     };
   }
 
+  // =====================================
+  // SAVE EQUIPMENT
+  // =====================================
+
+  function saveEquipment() {
+    try {
+      const saveData = {
+        version: 1,
+        equipment: getEquipment()
+      };
+
+      localStorage.setItem(
+        EQUIPMENT_SAVE_KEY,
+        JSON.stringify(saveData)
+      );
+
+      console.log("Equipment berhasil disimpan!");
+      return true;
+    } catch (error) {
+      console.error("Gagal menyimpan equipment:", error);
+      return false;
+    }
+  }
+
+  // =====================================
+  // LOAD EQUIPMENT
+  // =====================================
+
+  function loadEquipment() {
+    try {
+      const rawData = localStorage.getItem(
+        EQUIPMENT_SAVE_KEY
+      );
+
+      if (!rawData) {
+        return false;
+      }
+
+      const saveData = JSON.parse(rawData);
+
+      if (
+        !saveData ||
+        saveData.version !== 1 ||
+        !saveData.equipment
+      ) {
+        return false;
+      }
+
+      const loadedSlots = {
+        weapon: null,
+        armor: null,
+        accessory: null
+      };
+
+      for (const slot of Object.keys(loadedSlots)) {
+        const savedItem = saveData.equipment[slot];
+
+        if (savedItem === null || savedItem === undefined) {
+          continue;
+        }
+
+        const catalogItem = equipmentCatalog.find(
+          item =>
+            item.id === savedItem.id &&
+            item.slot === slot
+        );
+
+        if (!catalogItem) {
+          continue;
+        }
+
+        loadedSlots[slot] = { ...catalogItem };
+      }
+
+      equipmentSlots.weapon = loadedSlots.weapon;
+      equipmentSlots.armor = loadedSlots.armor;
+      equipmentSlots.accessory = loadedSlots.accessory;
+
+      console.log("Equipment berhasil dimuat!");
+      return true;
+    } catch (error) {
+      console.error("Gagal memuat equipment:", error);
+      return false;
+    }
+  }
+
+  // =====================================
+  // DELETE EQUIPMENT SAVE
+  // =====================================
+
+  function deleteEquipmentSave() {
+    try {
+      localStorage.removeItem(EQUIPMENT_SAVE_KEY);
+
+      equipmentSlots.weapon = null;
+      equipmentSlots.armor = null;
+      equipmentSlots.accessory = null;
+
+      return true;
+    } catch (error) {
+      console.error("Gagal menghapus save equipment:", error);
+      return false;
+    }
+  }
+
+  // =====================================
+  // EQUIP ITEM
+  // =====================================
+
   function equip(itemId) {
     const item = equipmentCatalog.find(
       entry => entry.id === itemId
@@ -126,11 +237,17 @@ export function createEquipmentSystem(inventory) {
 
     equipmentSlots[item.slot] = { ...item };
 
+    saveEquipment();
+
     return {
       success: true,
       message: item.name + " berhasil dipakai."
     };
   }
+
+  // =====================================
+  // UNEQUIP ITEM
+  // =====================================
 
   function unequip(slot) {
     if (
@@ -163,11 +280,17 @@ export function createEquipmentSystem(inventory) {
 
     equipmentSlots[slot] = null;
 
+    saveEquipment();
+
     return {
       success: true,
       message: item.name + " berhasil dilepas."
     };
   }
+
+  // =====================================
+  // EQUIPMENT BONUS
+  // =====================================
 
   function getBonuses() {
     let attack = 0;
@@ -191,6 +314,9 @@ export function createEquipmentSystem(inventory) {
     getEquipment,
     equip,
     unequip,
-    getBonuses
+    getBonuses,
+    saveEquipment,
+    loadEquipment,
+    deleteEquipmentSave
   };
 }
