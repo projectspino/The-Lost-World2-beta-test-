@@ -31,7 +31,7 @@ export function createEquipmentUI(equipmentSystem, inventory) {
       fontFamily: "Arial, sans-serif"
     });
 
-    function render() {
+    function render(statusMessage = "") {
       if (!panel) return;
 
       const equipped = equipmentSystem.getEquipment();
@@ -43,36 +43,61 @@ export function createEquipmentUI(equipmentSystem, inventory) {
         accessory: "Aksesori"
       };
 
-      const slotsHTML = Object.entries(slotNames).map(([slot, label]) => {
-        const item = equipped[slot];
+      const slotsHTML = Object.entries(slotNames).map(
+        ([slot, label]) => {
+          const item = equipped[slot];
 
-        return `
-          <div style="padding:10px;border-bottom:1px solid #776344">
-            <strong>${label}:</strong>
-            ${item ? item.name : "Kosong"}
-            ${
-              item
-                ? `<button data-unequip="${slot}">LEPAS</button>`
-                : ""
-            }
-          </div>
-        `;
-      }).join("");
+          return `
+            <div style="
+              padding:10px;
+              margin-bottom:7px;
+              background:#26372b;
+              border-radius:8px;
+            ">
+              <strong>${label}:</strong>
+              ${item ? item.name : "Kosong"}
+
+              ${
+                item
+                  ? `<button data-unequip="${slot}">LEPAS</button>`
+                  : ""
+              }
+            </div>
+          `;
+        }
+      ).join("");
 
       const catalog = equipmentSystem.getCatalog();
 
       const ownedHTML = catalog.map(item => {
         const owned = items.find(
-          entry => entry.name === item.name && entry.quantity > 0
+          entry =>
+            entry.name === item.name &&
+            entry.quantity > 0
         );
 
         if (!owned) return "";
 
         return `
-          <div style="padding:8px;border-bottom:1px solid #776344">
+          <div style="
+            padding:10px;
+            margin-bottom:7px;
+            background:#26372b;
+            border-radius:8px;
+          ">
             <strong>${item.name}</strong>
-            <p>Serangan +${item.attack} | Pertahanan +${item.defense}</p>
-            <button data-equip="${item.id}">PAKAI</button>
+
+            <p>
+              Serangan +${item.attack}
+              |
+              Pertahanan +${item.defense}
+            </p>
+
+            <p>Jumlah: ${owned.quantity}</p>
+
+            <button data-equip="${item.id}">
+              PAKAI
+            </button>
           </div>
         `;
       }).join("");
@@ -80,44 +105,70 @@ export function createEquipmentUI(equipmentSystem, inventory) {
       const bonuses = equipmentSystem.getBonuses();
 
       panel.innerHTML = `
-        <h2>PERLENGKAPAN</h2>
+        <h2 style="color:#f1d49a;text-align:center">
+          PERLENGKAPAN
+        </h2>
 
         <h3>Slot Perlengkapan</h3>
         ${slotsHTML}
 
         <h3>Bonus Karakter</h3>
-        <p>Serangan: +${bonuses.attack}</p>
-        <p>Pertahanan: +${bonuses.defense}</p>
+
+        <div style="
+          padding:12px;
+          background:#26372b;
+          border-radius:8px;
+        ">
+          <p>Serangan: +${bonuses.attack}</p>
+          <p>Pertahanan: +${bonuses.defense}</p>
+        </div>
 
         <h3>Barang yang Dimiliki</h3>
+
         ${ownedHTML || "<p>Belum memiliki perlengkapan.</p>"}
 
-        <button id="equipment-close">TUTUP</button>
-        <p id="equipment-message"></p>
+        <p id="equipment-message" style="
+          color:#f1d49a;
+          text-align:center;
+          min-height:20px;
+        "></p>
+
+        <button id="equipment-close" style="
+          width:100%;
+          padding:12px;
+          margin-top:12px;
+        ">
+          TUTUP
+        </button>
       `;
+
+      const messageElement = panel.querySelector(
+        "#equipment-message"
+      );
+
+      messageElement.textContent = statusMessage;
 
       panel.querySelectorAll("[data-equip]").forEach(button => {
         button.onclick = () => {
-          const result = equipmentSystem.equip(button.dataset.equip);
-          showMessage(result.message);
-          if (result.success) render();
+          const result = equipmentSystem.equip(
+            button.dataset.equip
+          );
+
+          render(result.message);
         };
       });
 
       panel.querySelectorAll("[data-unequip]").forEach(button => {
         button.onclick = () => {
-          const result = equipmentSystem.unequip(button.dataset.unequip);
-          showMessage(result.message);
-          if (result.success) render();
+          const result = equipmentSystem.unequip(
+            button.dataset.unequip
+          );
+
+          render(result.message);
         };
       });
 
       panel.querySelector("#equipment-close").onclick = close;
-    }
-
-    function showMessage(message) {
-      const messageElement = panel?.querySelector("#equipment-message");
-      if (messageElement) messageElement.textContent = message;
     }
 
     container.appendChild(panel);
@@ -129,4 +180,4 @@ export function createEquipmentUI(equipmentSystem, inventory) {
     close,
     dispose: close
   };
-                                               }
+}
