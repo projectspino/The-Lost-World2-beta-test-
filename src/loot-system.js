@@ -1,3 +1,4 @@
+
 const MONSTER_LOOT = {
   Goblin: {
     xp: 25,
@@ -35,7 +36,9 @@ export function createLootSystem(playerStats, inventory) {
     !inventory ||
     typeof inventory.addItem !== "function"
   ) {
-    throw new Error("PlayerStats atau Inventory tidak valid.");
+    throw new Error(
+      "PlayerStats atau Inventory tidak valid."
+    );
   }
 
   const rewardedEnemies = new WeakSet();
@@ -53,7 +56,10 @@ export function createLootSystem(playerStats, inventory) {
   }
 
   function rewardMonster(monster) {
-    if (!monster || typeof monster !== "object") {
+    if (
+      !monster ||
+      typeof monster !== "object"
+    ) {
       return {
         success: false,
         message: "Data monster tidak valid."
@@ -67,10 +73,17 @@ export function createLootSystem(playerStats, inventory) {
       };
     }
 
-    const monsterName =
-      typeof monster === "string"
-        ? monster
-        : monster.name;
+    const monsterName = monster.name;
+
+    if (
+      !monsterName ||
+      typeof monsterName !== "string"
+    ) {
+      return {
+        success: false,
+        message: "Nama monster tidak valid."
+      };
+    }
 
     const loot = getMonsterLoot(monsterName);
 
@@ -84,7 +97,8 @@ export function createLootSystem(playerStats, inventory) {
     rewardedEnemies.add(monster);
 
     const gold = Math.floor(
-      Math.random() * (loot.gold[1] - loot.gold[0] + 1)
+      Math.random() *
+      (loot.gold[1] - loot.gold[0] + 1)
     ) + loot.gold[0];
 
     playerStats.addXP(loot.xp);
