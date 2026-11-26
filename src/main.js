@@ -83,7 +83,7 @@ const settings = {
 };
 
 // =====================================
-// SAVE ALL GAME DATA
+// SAVE & LOAD
 // =====================================
 
 function saveAllGameData() {
@@ -94,18 +94,11 @@ function saveAllGameData() {
   const statsSaved = playerStats.saveGame();
   const inventorySaved = inventory.saveInventory();
 
-  const equipmentSaved = equipmentSystem
-    ? equipmentSystem.saveEquipment()
-    : true;
-
-  const success =
-    statsSaved &&
-    inventorySaved &&
-    equipmentSaved;
+  const success = statsSaved && inventorySaved;
 
   console.log(
     success
-      ? "Semua progres game berhasil disimpan!"
+      ? "Game berhasil disimpan!"
       : "Gagal menyimpan sebagian progres game."
   );
 
@@ -599,7 +592,7 @@ function startGame() {
   playerStats = createPlayerStats();
   inventory = createInventory();
 
-  // Muat data statistik dan inventaris.
+  // Muat data yang tersimpan.
   const statsLoaded = playerStats.loadGame();
   const inventoryLoaded = inventory.loadInventory();
 
@@ -629,17 +622,8 @@ function startGame() {
   shopSystem = createShopSystem(playerStats, inventory);
   shopUI = createShopUI(shopSystem, playerStats, inventory);
 
-  // Equipment dan pemuatan perlengkapan.
+  // Equipment.
   equipmentSystem = createEquipmentSystem(inventory);
-
-  const equipmentLoaded = equipmentSystem.loadEquipment();
-
-  console.log(
-    equipmentLoaded
-      ? "Equipment berhasil dimuat."
-      : "Belum ada equipment tersimpan."
-  );
-
   equipmentUI = createEquipmentUI(equipmentSystem, inventory);
 
   inventory.setOnItemAdded((name, quantity) => {
@@ -836,4 +820,24 @@ function exitGame() {
   }
 
   if (engine) {
-    engine
+    engine.stopRenderLoop();
+    engine.dispose();
+  }
+
+  engine = null;
+  scene = null;
+  camera = null;
+  player = null;
+  playerStats = null;
+  inventory = null;
+  questSystem = null;
+
+  showMainMenu();
+}
+
+// =====================================
+// INITIALIZE
+// =====================================
+
+showLoading();
+    
