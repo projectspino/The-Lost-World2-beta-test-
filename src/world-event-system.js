@@ -15,8 +15,9 @@ export class WorldEventSystem {
   }
 
   registerEvent(id, data = {}) {
-    if (typeof id !== "string" || !id.trim()) return false;
-    if (this.events.has(id)) return false;
+    if (typeof id !== "string" || !id.trim() || this.events.has(id)) {
+      return false;
+    }
 
     this.events.set(id, {
       id,
@@ -25,8 +26,13 @@ export class WorldEventSystem {
       type: data.type ?? "exploration",
       duration: Math.max(1, Number(data.duration) || 300),
       cooldown: Math.max(0, Number(data.cooldown) || 600),
-      rewards: Array.isArray(data.rewards) ? data.rewards : [],
-      requirements: data.requirements ?? null
+      rewards: Array.isArray(data.rewards)
+        ? data.rewards.map(item => ({ ...item }))
+        : [],
+      requirements:
+        typeof data.requirements === "function"
+          ? data.requirements
+          : null
     });
 
     return true;
@@ -72,31 +78,41 @@ export class WorldEventSystem {
     return this.events.size;
   }
 
+  notify(callback, data) {
+    if (typeof callback !== "function") return;
+
+    try {
+      callback(data);
+    } catch (error) {
+      console.error("World event callback error:", error);
+    }
+  }
+
   startEvent(id, context = {}) {
     if (this.activeEvent) return false;
 
     const event = this.events.get(id);
-    if (!event || this.completedEvents.has(id)) return false;
+    if (!event || this.getCooldown(id) > 0) return false;
 
-    if ((this.cooldowns.get(id) ?? 0) > 0) return false;
-
-    if (
-      typeof event.requirements === "function" &&
-      !event.requirements(context)
-    ) {
-      return false;
+    if (event.requirements) {
+      try {
+        if (!event.requirements(context)) return false;
+      } catch (error) {
+        console.error("World event requirement error:", error);
+        return false;
+      }
     }
 
     this.activeEvent = {
       ...event,
+      rewards: event.rewards.map(item => ({ ...item })),
       remaining: event.duration,
       startedAt: Date.now(),
       status: "active"
     };
 
-    if (typeof this.onEventStart === "function") {
-      this.onEventStart(this.getActiveEvent());
-    }
+    this.save();
+    this.notify(this.onEventStart, this.getActiveEvent());
 
     return true;
   }
@@ -107,18 +123,25 @@ export class WorldEventSystem {
     }
 
     for (const [id, remaining] of this.cooldowns) {
-      this.cooldowns.set(
-        id,
-        Math.max(0, remaining - deltaSeconds)
-      );
+      const next = Math.max(0, remaining - deltaSeconds);
+
+      if (next <= 0) {
+        this.cooldowns.delete(id);
+      } else {
+        this.cooldowns.set(id, next);
+      }
     }
 
     if (!this.activeEvent) return null;
 
-    this.activeEvent.remaining -= deltaSeconds;
+    this.activeEvent.remaining = Math.max(
+      0,
+      this.activeEvent.remaining - deltaSeconds
+    );
 
     if (this.activeEvent.remaining <= 0) {
       this.endEvent("expired");
+      return null;
     }
 
     return this.getActiveEvent();
@@ -132,17 +155,15 @@ export class WorldEventSystem {
 
     this.completedEvents.add(event.id);
     this.cooldowns.set(event.id, event.cooldown);
-
     this.activeEvent = null;
+
     this.save();
 
-    if (typeof this.onEventComplete === "function") {
-      this.onEventComplete({
-        id: event.id,
-        name: event.name,
-        rewards: event.rewards.map(item => ({ ...item }))
-      });
-    }
+    this.notify(this.onEventComplete, {
+      id: event.id,
+      name: event.name,
+      rewards: event.rewards.map(item => ({ ...item }))
+    });
 
     return true;
   }
@@ -158,13 +179,10 @@ export class WorldEventSystem {
     }
 
     this.save();
-
-    if (typeof this.onEventEnd === "function") {
-      this.onEventEnd({
-        id: event.id,
-        reason
-      });
-    }
+    this.notify(this.onEventEnd, {
+      id: event.id,
+      reason
+    });
 
     return true;
   }
@@ -181,10 +199,10 @@ export class WorldEventSystem {
   getAvailableEvents() {
     return [...this.events.values()].map(event => ({
       ...event,
+      rewards: event.rewards.map(item => ({ ...item })),
       available:
         !this.activeEvent &&
-        !this.completedEvents.has(event.id) &&
-        (this.cooldowns.get(event.id) ?? 0) <= 0
+        this.getCooldown(event.id) <= 0
     }));
   }
 
@@ -196,37 +214,58 @@ export class WorldEventSystem {
     };
   }
 
+  getCooldown(id) {
+    return Math.max(0, this.cooldowns.get(id) ?? 0);
+  }
+
   save() {
     try {
       localStorage.setItem(
         this.storageKey,
         JSON.stringify({
+          version: 1,
           completed: [...this.completedEvents],
           cooldowns: [...this.cooldowns]
         })
       );
+
       return true;
-    } catch {
+    } catch (error) {
+      console.error("World event save error:", error);
       return false;
     }
   }
 
   load() {
     try {
-      const saved = JSON.parse(
-        localStorage.getItem(this.storageKey) ?? "{}"
-      );
+      const raw = localStorage.getItem(this.storageKey);
+      if (!raw) return false;
+
+      const saved = JSON.parse(raw);
+      if (!saved || saved.version !== 1) return false;
 
       this.completedEvents = new Set(
-        Array.isArray(saved.completed) ? saved.completed : []
+        Array.isArray(saved.completed)
+          ? saved.completed.filter(id => typeof id === "string")
+          : []
       );
 
       this.cooldowns = new Map(
-        Array.isArray(saved.cooldowns) ? saved.cooldowns : []
+        Array.isArray(saved.cooldowns)
+          ? saved.cooldowns.filter(
+              entry =>
+                Array.isArray(entry) &&
+                typeof entry[0] === "string" &&
+                Number.isFinite(entry[1]) &&
+                entry[1] >= 0
+            )
+          : []
       );
-    } catch {
-      this.completedEvents.clear();
-      this.cooldowns.clear();
+
+      return true;
+    } catch (error) {
+      console.error("World event load error:", error);
+      return false;
     }
   }
 
@@ -237,8 +276,8 @@ export class WorldEventSystem {
 
     try {
       localStorage.removeItem(this.storageKey);
-    } catch {
-      // Penyimpanan tidak tersedia.
+    } catch (error) {
+      console.error("World event reset error:", error);
     }
   }
 
@@ -247,8 +286,9 @@ export class WorldEventSystem {
     this.events.clear();
     this.completedEvents.clear();
     this.cooldowns.clear();
+
     this.onEventStart = null;
     this.onEventComplete = null;
     this.onEventEnd = null;
   }
-}
+      }
