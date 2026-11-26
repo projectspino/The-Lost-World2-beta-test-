@@ -1,5 +1,6 @@
 
 import * as BABYLON from "@babylonjs/core";
+import { createMonster } from "./characters/monsters/monster-factory.js";
 
 export function createEnemyAI(scene, player, onPlayerHit) {
   if (!scene || !player) {
@@ -17,7 +18,6 @@ export function createEnemyAI(scene, player, onPlayerHit) {
       health: 70,
       damage: 8,
       speed: 1.8,
-      color: new BABYLON.Color3(0.85, 0.82, 0.72),
       distance: 13
     },
     {
@@ -26,7 +26,6 @@ export function createEnemyAI(scene, player, onPlayerHit) {
       health: 90,
       damage: 12,
       speed: 3,
-      color: new BABYLON.Color3(0.35, 0.35, 0.4),
       distance: 19
     },
     {
@@ -35,7 +34,6 @@ export function createEnemyAI(scene, player, onPlayerHit) {
       health: 150,
       damage: 18,
       speed: 1.5,
-      color: new BABYLON.Color3(0.2, 0.45, 0.18),
       distance: 25
     },
     {
@@ -44,7 +42,6 @@ export function createEnemyAI(scene, player, onPlayerHit) {
       health: 1000,
       damage: 30,
       speed: 0.9,
-      color: new BABYLON.Color3(0.45, 0.35, 0.25),
       distance: 35
     }
   ];
@@ -52,45 +49,38 @@ export function createEnemyAI(scene, player, onPlayerHit) {
   for (const definition of definitions) {
     for (let i = 0; i < definition.count; i++) {
       const id = nextId++;
-
-      const material = new BABYLON.StandardMaterial(
-        `enemy-material-${id}`,
-        scene
-      );
-
-      material.diffuseColor = definition.color.clone();
-
-      const mesh = BABYLON.MeshBuilder.CreateCapsule(
-        `enemy-${definition.name}-${id}`,
-        {
-          height: definition.name === "Ancient Golem" ? 3.5 : 1.7,
-          radius: definition.name === "Ancient Golem" ? 1.1 : 0.4
-        },
-        scene
-      );
-
       const angle = (id / 8) * Math.PI * 2;
 
-      mesh.position.set(
+      const position = new BABYLON.Vector3(
         Math.cos(angle) * definition.distance,
-        definition.name === "Ancient Golem" ? 1.75 : 0.85,
+        0,
         Math.sin(angle) * definition.distance
       );
 
-      mesh.material = material;
+      const monster = createMonster(scene, definition.name, {
+        position
+      });
+
+      const mesh = monster.root;
+
+      mesh.metadata = {
+        entityType: "enemy",
+        enemyId: id,
+        enemyName: definition.name
+      };
 
       enemies.push({
         id,
         name: definition.name,
         mesh,
+        monster,
         health: definition.health,
         maxHealth: definition.health,
         damage: definition.damage,
         speed: definition.speed,
         alive: true,
         attackCooldown: 0,
-        attackRange: definition.name === "Dire Wolf" ? 1.8 : 2.2,
-        material
+        attackRange: definition.name === "Dire Wolf" ? 1.8 : 2.2
       });
     }
   }
@@ -129,9 +119,6 @@ export function createEnemyAI(scene, player, onPlayerHit) {
     enemy.mesh.position.addInPlace(
       direction.scale(movement)
     );
-
-    enemy.mesh.position.y =
-      enemy.name === "Ancient Golem" ? 1.75 : 0.85;
 
     enemy.mesh.rotation.y = Math.atan2(
       direction.x,
@@ -178,7 +165,9 @@ export function createEnemyAI(scene, player, onPlayerHit) {
       !Number.isFinite(deltaSeconds) ||
       deltaSeconds <= 0 ||
       player.isDisposed?.()
-    ) return;
+    ) {
+      return;
+    }
 
     for (const enemy of enemies) {
       updateEnemy(enemy, Math.min(deltaSeconds, 0.1));
@@ -205,8 +194,10 @@ export function createEnemyAI(scene, player, onPlayerHit) {
     if (enemy.health <= 0) {
       enemy.alive = false;
 
-      if (enemy.mesh && !enemy.mesh.isDisposed()) {
-        enemy.mesh.setEnabled(false);
+      if (enemy.monster && typeof enemy.monster.dispose === "function") {
+        enemy.monster.dispose();
+      } else if (enemy.mesh && !enemy.mesh.isDisposed()) {
+        enemy.mesh.dispose();
       }
 
       return true;
@@ -221,6 +212,7 @@ export function createEnemyAI(scene, player, onPlayerHit) {
 
   function getEnemyById(id) {
     const enemy = enemies.find(item => item.id === id);
+
     if (!enemy) return null;
 
     return {
@@ -235,12 +227,10 @@ export function createEnemyAI(scene, player, onPlayerHit) {
     disposed = true;
 
     for (const enemy of enemies) {
-      if (enemy.mesh && !enemy.mesh.isDisposed()) {
+      if (enemy.monster && typeof enemy.monster.dispose === "function") {
+        enemy.monster.dispose();
+      } else if (enemy.mesh && !enemy.mesh.isDisposed()) {
         enemy.mesh.dispose();
-      }
-
-      if (enemy.material) {
-        enemy.material.dispose();
       }
 
       enemy.alive = false;
@@ -272,4 +262,4 @@ export function createEnemyAI(scene, player, onPlayerHit) {
     getEnemyById,
     dispose: disposeEnemyAI
   };
-}
+      }
