@@ -35,7 +35,8 @@ export class WorldEventSave {
       );
 
       return true;
-    } catch {
+    } catch (error) {
+      console.error("World event save error:", error);
       return false;
     }
   }
@@ -81,7 +82,8 @@ export class WorldEventSave {
             : null,
         savedAt: Number(data.savedAt) || 0
       };
-    } catch {
+    } catch (error) {
+      console.error("World event load error:", error);
       return null;
     }
   }
@@ -103,13 +105,16 @@ export class WorldEventSave {
     eventSystem.activeEvent = null;
 
     if (data.activeEvent) {
-      const event = eventSystem.events.get(
+      const event = eventSystem.events?.get(
         data.activeEvent.id
       );
 
       if (event && data.activeEvent.remaining > 0) {
         eventSystem.activeEvent = {
           ...event,
+          rewards: Array.isArray(event.rewards)
+            ? event.rewards.map(item => ({ ...item }))
+            : [],
           remaining: data.activeEvent.remaining,
           startedAt: data.savedAt,
           status: "active"
@@ -124,8 +129,9 @@ export class WorldEventSave {
     try {
       localStorage.removeItem(this.storageKey);
       return true;
-    } catch {
+    } catch (error) {
+      console.error("World event clear error:", error);
       return false;
     }
   }
-                          }
+}
