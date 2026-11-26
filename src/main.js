@@ -3,6 +3,7 @@ import * as BABYLON from "@babylonjs/core";
 import "./styles/menu.css";
 
 import { buildWorld } from "./world.js";
+import { createPlayerCharacter } from "./characters/player/character-factory.js";
 import { createPlayerController } from "./player-controller.js";
 import { createCombatSystem } from "./combat-system.js";
 import { createPlayerStats } from "./player-stats.js";
@@ -22,6 +23,7 @@ let engine = null;
 let scene = null;
 let camera = null;
 let player = null;
+let playerCharacter = null;
 
 let disposePlayerController = null;
 let disposeCombatSystem = null;
@@ -324,6 +326,7 @@ function addGameHudStyles() {
     }
 
     .npc-dialog p { line-height: 1.5; }
+
     .npc-dialog button {
       margin: 5px;
       padding: 10px 16px;
@@ -503,29 +506,19 @@ function startGame() {
   camera.upperRadiusLimit = 14;
   camera.wheelPrecision = 60;
 
-  player = BABYLON.MeshBuilder.CreateCapsule(
-    "player",
+  // =====================================
+  // PLAYER CHARACTER
+  // =====================================
+
+  playerCharacter = createPlayerCharacter(
+    scene,
+    selectedCharacter,
     {
-      height: 2,
-      radius: 0.45
-    },
-    scene
+      position: new BABYLON.Vector3(0, 1, 0)
+    }
   );
 
-  player.position.y = 1;
-
-  const playerMaterial = new BABYLON.StandardMaterial(
-    "player-material",
-    scene
-  );
-
-  playerMaterial.diffuseColor = new BABYLON.Color3(
-    0.65,
-    0.72,
-    0.82
-  );
-
-  player.material = playerMaterial;
+  player = playerCharacter.root;
   camera.lockedTarget = player;
 
   // =====================================
@@ -666,7 +659,7 @@ function startGame() {
   enemyAI = createEnemyAI(
     scene,
     player,
-    (damage, enemyName) => {
+    (damage, enemy) => {
       if (playerStats) {
         const bonuses = equipmentSystem
           ? equipmentSystem.getBonuses()
@@ -685,7 +678,9 @@ function startGame() {
         playerStats.takeDamage(reducedDamage);
       }
 
-      console.log(enemyName + " menyerang pemain!");
+      console.log(
+        (enemy?.name || "Musuh") + " menyerang pemain!"
+      );
     }
   );
 
@@ -743,8 +738,8 @@ function startGame() {
   window.addEventListener("resize", resizeEngine);
 
   document.getElementById("exit-game").onclick = exitGame;
-}
-
+    }
+    
 // =====================================
 // RESIZE
 // =====================================
@@ -802,6 +797,11 @@ function exitGame() {
     equipmentUI = null;
   }
 
+  if (playerCharacter) {
+    playerCharacter.dispose();
+    playerCharacter = null;
+  }
+
   shopSystem = null;
   equipmentSystem = null;
 
@@ -834,4 +834,3 @@ function exitGame() {
 // =====================================
 
 showLoading();
-    
