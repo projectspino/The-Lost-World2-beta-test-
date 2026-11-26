@@ -4,19 +4,16 @@ export class WorldEventSystem {
     this.onEventStart = options.onEventStart ?? null;
     this.onEventComplete = options.onEventComplete ?? null;
     this.onEventEnd = options.onEventEnd ?? null;
-
     this.events = new Map();
     this.activeEvent = null;
     this.completedEvents = new Set();
     this.cooldowns = new Map();
-
     this.storageKey = options.storageKey ?? "lost_world_events";
     this.load();
   }
 
   notify(callback, data) {
     if (typeof callback !== "function") return;
-
     try {
       callback(data);
     } catch (error) {
@@ -25,11 +22,7 @@ export class WorldEventSystem {
   }
 
   registerEvent(id, data = {}) {
-    if (
-      typeof id !== "string" ||
-      !id.trim() ||
-      this.events.has(id)
-    ) {
+    if (typeof id !== "string" || !id.trim() || this.events.has(id)) {
       return false;
     }
 
@@ -41,12 +34,12 @@ export class WorldEventSystem {
       duration: Math.max(1, Number(data.duration) || 300),
       cooldown: Math.max(0, Number(data.cooldown) || 600),
       rewards: Array.isArray(data.rewards)
-        ? data.rewards.map(item => ({ ...item }))
+        ? data.rewards.map((item) => ({ ...item }))
         : [],
       requirements:
         typeof data.requirements === "function"
           ? data.requirements
-          : null
+          : null,
     });
 
     return true;
@@ -61,8 +54,8 @@ export class WorldEventSystem {
       cooldown: 900,
       rewards: [
         { name: "Gold", quantity: 100 },
-        { name: "Monster Core", quantity: 2 }
-      ]
+        { name: "Monster Core", quantity: 2 },
+      ],
     });
 
     this.registerEvent("ancient_boss", {
@@ -73,8 +66,8 @@ export class WorldEventSystem {
       cooldown: 1800,
       rewards: [
         { name: "Ancient Core", quantity: 1 },
-        { name: "Gold", quantity: 250 }
-      ]
+        { name: "Gold", quantity: 250 },
+      ],
     });
 
     this.registerEvent("treasure_hunt", {
@@ -85,8 +78,8 @@ export class WorldEventSystem {
       cooldown: 600,
       rewards: [
         { name: "Gold", quantity: 150 },
-        { name: "Crystal", quantity: 3 }
-      ]
+        { name: "Crystal", quantity: 3 },
+      ],
     });
 
     return this.events.size;
@@ -94,16 +87,13 @@ export class WorldEventSystem {
 
   startEvent(id, context = {}) {
     if (this.activeEvent) return false;
-
     const event = this.events.get(id);
 
     if (
       !event ||
       this.completedEvents.has(id) ||
       this.getCooldown(id) > 0
-    ) {
-      return false;
-    }
+    ) return false;
 
     if (event.requirements) {
       try {
@@ -116,15 +106,14 @@ export class WorldEventSystem {
 
     this.activeEvent = {
       ...event,
-      rewards: event.rewards.map(item => ({ ...item })),
+      rewards: event.rewards.map((item) => ({ ...item })),
       remaining: event.duration,
       startedAt: Date.now(),
-      status: "active"
+      status: "active",
     };
 
     this.notify(this.onEventStart, this.getActiveEvent());
     this.save();
-
     return true;
   }
 
@@ -135,12 +124,8 @@ export class WorldEventSystem {
 
     for (const [id, remaining] of this.cooldowns) {
       const next = Math.max(0, remaining - deltaSeconds);
-
-      if (next <= 0) {
-        this.cooldowns.delete(id);
-      } else {
-        this.cooldowns.set(id, next);
-      }
+      if (next <= 0) this.cooldowns.delete(id);
+      else this.cooldowns.set(id, next);
     }
 
     if (!this.activeEvent) return null;
@@ -163,17 +148,15 @@ export class WorldEventSystem {
     if (id && this.activeEvent.id !== id) return false;
 
     const event = this.activeEvent;
-
     this.completedEvents.add(event.id);
     this.cooldowns.set(event.id, event.cooldown);
     this.activeEvent = null;
-
     this.save();
 
     this.notify(this.onEventComplete, {
       id: event.id,
       name: event.name,
-      rewards: event.rewards.map(item => ({ ...item }))
+      rewards: event.rewards.map((item) => ({ ...item })),
     });
 
     return true;
@@ -190,32 +173,26 @@ export class WorldEventSystem {
     }
 
     this.save();
-
-    this.notify(this.onEventEnd, {
-      id: event.id,
-      reason
-    });
-
+    this.notify(this.onEventEnd, { id: event.id, reason });
     return true;
   }
 
   getActiveEvent() {
     if (!this.activeEvent) return null;
-
     return {
       ...this.activeEvent,
-      rewards: this.activeEvent.rewards.map(item => ({ ...item }))
+      rewards: this.activeEvent.rewards.map((item) => ({ ...item })),
     };
   }
 
   getAvailableEvents() {
-    return [...this.events.values()].map(event => ({
+    return [...this.events.values()].map((event) => ({
       ...event,
-      rewards: event.rewards.map(item => ({ ...item })),
+      rewards: event.rewards.map((item) => ({ ...item })),
       available:
         !this.activeEvent &&
         !this.completedEvents.has(event.id) &&
-        this.getCooldown(event.id) <= 0
+        this.getCooldown(event.id) <= 0,
     }));
   }
 
@@ -223,7 +200,7 @@ export class WorldEventSystem {
     return {
       total: this.events.size,
       completed: this.completedEvents.size,
-      active: this.activeEvent?.id ?? null
+      active: this.activeEvent?.id ?? null,
     };
   }
 
@@ -238,10 +215,9 @@ export class WorldEventSystem {
         JSON.stringify({
           version: 1,
           completed: [...this.completedEvents],
-          cooldowns: [...this.cooldowns]
+          cooldowns: [...this.cooldowns],
         })
       );
-
       return true;
     } catch (error) {
       console.error("World event save error:", error);
@@ -255,22 +231,22 @@ export class WorldEventSystem {
       if (!raw) return false;
 
       const saved = JSON.parse(raw);
-
       if (!saved || saved.version !== 1) return false;
 
       this.completedEvents = new Set(
         Array.isArray(saved.completed)
-          ? saved.completed.filter(id => typeof id === "string")
+          ? saved.completed.filter((id) => typeof id === "string")
           : []
       );
 
       this.cooldowns = new Map(
         Array.isArray(saved.cooldowns)
-          ? saved.cooldowns.filter(entry =>
-              Array.isArray(entry) &&
-              typeof entry[0] === "string" &&
-              Number.isFinite(entry[1]) &&
-              entry[1] >= 0
+          ? saved.cooldowns.filter(
+              (entry) =>
+                Array.isArray(entry) &&
+                typeof entry[0] === "string" &&
+                Number.isFinite(entry[1]) &&
+                entry[1] >= 0
             )
           : []
       );
