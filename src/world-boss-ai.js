@@ -1,66 +1,75 @@
 
-export class WorldBossAI {
+class WorldBossAI {
   constructor(boss, options = {}) {
     this.boss = boss;
-    this.detectionRange = options.detectionRange ?? 25;
-    this.attackRange = options.attackRange ?? 5;
-    this.moveSpeed = options.moveSpeed ?? 3;
-    this.attackCooldown = options.attackCooldown ?? 2.5;
-
-    this.state = "idle";
-    this.attackTimer = 0;
     this.target = null;
-    this.enabled = true;
 
+    this.moveSpeed = options.moveSpeed ?? 2.5;
+    this.attackRange = options.attackRange ?? 3;
+    this.detectionRange = options.detectionRange ?? 18;
+    this.attackCooldown = options.attackCooldown ?? 2;
+    this.attackDamage = options.attackDamage ?? 15;
+
+    this.attackTimer = 0;
+    this.state = "idle";
     this.onAttack = options.onAttack ?? null;
     this.onStateChange = options.onStateChange ?? null;
+    this.disposed = false;
   }
 
   setTarget(target) {
-    this.target = target;
+    if (this.disposed) return false;
+
+    this.target = target || null;
+    return true;
   }
 
-  setState(state) {
-    if (this.state === state) return;
+  getState() {
+    return this.state;
+  }
 
-    this.state = state;
+  setState(nextState) {
+    if (this.state === nextState) return;
+
+    this.state = nextState;
 
     if (typeof this.onStateChange === "function") {
-      this.onStateChange(state);
+      try {
+        this.onStateChange(nextState, this.boss);
+      } catch (error) {
+        console.error("WorldBossAI state callback error:", error);
+      }
     }
   }
 
-  distanceToTarget() {
-    if (!this.boss?.position || !this.target?.position) {
-      return Infinity;
-    }
+  getPosition(entity) {
+    if (!entity) return null;
 
-    const a = this.boss.position;
-    const b = this.target.position;
+    if (entity.position) return entity.position;
+    if (entity.mesh?.position) return entity.mesh.position;
 
-    return Math.hypot(
-      b.x - a.x,
-      b.z - a.z
-    );
+    return null;
   }
 
-  update(deltaSeconds) {
-    if (
-      !this.enabled ||
-      !this.boss ||
-      !this.target ||
-      !Number.isFinite(deltaSeconds) ||
-      deltaSeconds <= 0
-    ) {
+  update(deltaTime) {
+    if (this.disposed || !this.boss) return;
+
+    const bossMesh = this.boss.mesh || this.boss;
+    if (!bossMesh || bossMesh.isDisposed?.()) return;
+
+    const bossPosition = this.getPosition(bossMesh);
+    const targetPosition = this.getPosition(this.target);
+
+    if (!bossPosition || !targetPosition) {
+      this.setState("idle");
       return;
     }
 
-    this.attackTimer = Math.max(
-      0,
-      this.attackTimer - deltaSeconds
-    );
+    const dx = targetPosition.x - bossPosition.x;
+    const dz = targetPosition.z - bossPosition.z;
+    const distance = Math.sqrt(dx * dx + dz * dz);
 
-    const distance = this.distanceToTarget();
+    this.attackTimer = Math.max(0, this.attackTimer - Math.max(0, deltaTime));
 
     if (distance > this.detectionRange) {
       this.setState("idle");
@@ -68,71 +77,60 @@ export class WorldBossAI {
     }
 
     if (distance <= this.attackRange) {
-      this.setState("attack");
-      this.tryAttack();
+      this.setState("attacking");
+
+      if (this.attackTimer <= 0) {
+        this.attackTimer = this.attackCooldown;
+
+        if (typeof this.onAttack === "function") {
+          try {
+            this.onAttack({
+              boss: this.boss,
+              target: this.target,
+              damage: this.attackDamage,
+            });
+          } catch (error) {
+            console.error("WorldBossAI attack callback error:", error);
+          }
+        }
+      }
+
       return;
     }
 
-    this.setState("chase");
-    this.moveTowardsTarget(deltaSeconds);
+    this.setState("chasing");
+    this.moveTowardsTarget(bossMesh, targetPosition, deltaTime);
   }
 
-  moveTowardsTarget(deltaSeconds) {
-    const position = this.boss.position;
-    const target = this.target.position;
+  moveTowardsTarget(bossMesh, targetPosition, deltaTime) {
+    if (!bossMesh?.position || !targetPosition) return;
 
-    const dx = target.x - position.x;
-    const dz = target.z - position.z;
-    const distance = Math.hypot(dx, dz);
+    const dx = targetPosition.x - bossMesh.position.x;
+    const dz = targetPosition.z - bossMesh.position.z;
+    const distance = Math.sqrt(dx * dx + dz * dz);
 
-    if (distance < 0.001) return;
+    if (distance <= 0.001) return;
 
     const step = Math.min(
-      this.moveSpeed * deltaSeconds,
+      this.moveSpeed * Math.max(0, deltaTime),
       distance
     );
 
-    position.x += dx / distance * step;
-    position.z += dz / distance * step;
-  }
+    bossMesh.position.x += (dx / distance) * step;
+    bossMesh.position.z += (dz / distance) * step;
 
-  tryAttack() {
-    if (this.attackTimer > 0) return false;
-
-    this.attackTimer = this.attackCooldown;
-
-    if (typeof this.onAttack === "function") {
-      this.onAttack({
-        boss: this.boss,
-        target: this.target
-      });
+    if (typeof bossMesh.rotation?.y === "number") {
+      bossMesh.rotation.y = Math.atan2(dx, dz);
     }
-
-    return true;
-  }
-
-  setEnabled(value) {
-    this.enabled = Boolean(value);
-
-    if (!this.enabled) {
-      this.setState("idle");
-    }
-  }
-
-  getState() {
-    return {
-      state: this.state,
-      attackCooldownRemaining: this.attackTimer,
-      targetDetected: this.distanceToTarget() <= this.detectionRange
-    };
   }
 
   dispose() {
-    this.enabled = false;
-    this.boss = null;
+    this.disposed = true;
     this.target = null;
     this.onAttack = null;
     this.onStateChange = null;
-    this.state = "idle";
+    this.setState("idle");
   }
 }
+
+export { WorldBossAI };
