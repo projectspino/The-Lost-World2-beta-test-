@@ -232,6 +232,7 @@ export function createPlayerStats() {
   updateUI();
 
   return {
+    stats,
     addXP,
     addGold,
     spendGold,
