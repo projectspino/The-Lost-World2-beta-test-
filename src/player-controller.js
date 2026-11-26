@@ -6,19 +6,19 @@ export function createPlayerController(
   camera,
   player,
   joystick,
-  jumpButton
+  jumpButton,
+  collisionSystem = null
 ) {
   let inputX = 0;
   let inputY = 0;
   let jumping = false;
   let verticalSpeed = 0;
   let activePointer = null;
+  let disposed = false;
 
   const walkSpeed = 7;
   const jumpPower = 7;
   const gravity = 18;
-
-  // Batas dunia 420 x 420
   const worldLimit = 205;
 
   function updateJoystick(event) {
@@ -27,18 +27,40 @@ export function createPlayerController(
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
 
-    inputX = Math.max(
+    inputX = BABYLON.Scalar.Clamp(
+      (event.clientX - centerX) / 40,
       -1,
-      Math.min(1, (event.clientX - centerX) / 40)
+      1
     );
 
-    inputY = Math.max(
+    inputY = BABYLON.Scalar.Clamp(
+      (event.clientY - centerY) / 40,
       -1,
-      Math.min(1, (event.clientY - centerY) / 40)
+      1
     );
   }
 
-  function stopJoystick(event) {
+  function handlePointerDown(event) {
+    if (disposed) return;
+
+    activePointer = event.pointerId;
+
+    if (joystick.setPointerCapture) {
+      joystick.setPointerCapture(activePointer);
+    }
+
+    updateJoystick(event);
+    event.preventDefault();
+  }
+
+  function handlePointerMove(event) {
+    if (event.pointerId !== activePointer) return;
+
+    updateJoystick(event);
+    event.preventDefault();
+  }
+
+  function handlePointerUp(event) {
     if (event.pointerId !== activePointer) return;
 
     activePointer = null;
@@ -46,31 +68,41 @@ export function createPlayerController(
     inputY = 0;
   }
 
-  joystick.addEventListener("pointerdown", event => {
-    activePointer = event.pointerId;
-    joystick.setPointerCapture(activePointer);
-    updateJoystick(event);
-    event.preventDefault();
-  });
-
-  joystick.addEventListener("pointermove", event => {
-    if (event.pointerId !== activePointer) return;
-
-    updateJoystick(event);
-    event.preventDefault();
-  });
-
-  joystick.addEventListener("pointerup", stopJoystick);
-  joystick.addEventListener("pointercancel", stopJoystick);
-
-  jumpButton.addEventListener("click", () => {
-    if (jumping) return;
+  function handleJump() {
+    if (disposed || jumping) return;
 
     jumping = true;
     verticalSpeed = jumpPower;
-  });
+  }
+
+  joystick.addEventListener(
+    "pointerdown",
+    handlePointerDown
+  );
+
+  joystick.addEventListener(
+    "pointermove",
+    handlePointerMove
+  );
+
+  joystick.addEventListener(
+    "pointerup",
+    handlePointerUp
+  );
+
+  joystick.addEventListener(
+    "pointercancel",
+    handlePointerUp
+  );
+
+  jumpButton.addEventListener(
+    "click",
+    handleJump
+  );
 
   const observer = scene.onBeforeRenderObservable.add(() => {
+    if (disposed || !player || !camera) return;
+
     const delta = Math.min(
       scene.getEngine().getDeltaTime() / 1000,
       0.05
@@ -92,25 +124,39 @@ export function createPlayerController(
       right.scale(inputX)
     );
 
-    if (movement.length() > 0.01) {
+    if (movement.lengthSquared() > 0.0001) {
       movement.normalize();
 
-      player.position.addInPlace(
-        movement.scale(walkSpeed * delta)
+      const displacement = movement.scale(
+        walkSpeed * delta
       );
 
-      // Mencegah pemain keluar dari dunia
-      player.position.x = BABYLON.Scalar.Clamp(
-        player.position.x,
-        -worldLimit,
-        worldLimit
-      );
+      if (
+        collisionSystem &&
+        collisionSystem.enabled
+      ) {
+        // Gerakan diperiksa oleh sistem collision
+        collisionSystem.movePlayer(displacement);
+      } else {
+        // Gerakan normal dengan batas dunia
+        const nextPosition = player.position.add(
+          displacement
+        );
 
-      player.position.z = BABYLON.Scalar.Clamp(
-        player.position.z,
-        -worldLimit,
-        worldLimit
-      );
+        nextPosition.x = BABYLON.Scalar.Clamp(
+          nextPosition.x,
+          -worldLimit,
+          worldLimit
+        );
+
+        nextPosition.z = BABYLON.Scalar.Clamp(
+          nextPosition.z,
+          -worldLimit,
+          worldLimit
+        );
+
+        player.position.copyFrom(nextPosition);
+      }
 
       player.rotation.y = Math.atan2(
         movement.x,
@@ -118,8 +164,10 @@ export function createPlayerController(
       );
     }
 
+    // Sistem lompat dan gravitasi
     if (jumping) {
       verticalSpeed -= gravity * delta;
+
       player.position.y += verticalSpeed * delta;
 
       if (player.position.y <= 1) {
@@ -131,9 +179,40 @@ export function createPlayerController(
   });
 
   return function disposeController() {
+    if (disposed) return;
+
+    disposed = true;
+
     scene.onBeforeRenderObservable.remove(observer);
 
-    joystick.replaceWith(joystick.cloneNode(true));
-    jumpButton.replaceWith(jumpButton.cloneNode(true));
+    joystick.removeEventListener(
+      "pointerdown",
+      handlePointerDown
+    );
+
+    joystick.removeEventListener(
+      "pointermove",
+      handlePointerMove
+    );
+
+    joystick.removeEventListener(
+      "pointerup",
+      handlePointerUp
+    );
+
+    joystick.removeEventListener(
+      "pointercancel",
+      handlePointerUp
+    );
+
+    jumpButton.removeEventListener(
+      "click",
+      handleJump
+    );
+
+    inputX = 0;
+    inputY = 0;
+    activePointer = null;
   };
 }
+  
