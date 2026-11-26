@@ -1,153 +1,237 @@
 
-export function createQuestUI(questSystem) {
-  if (!questSystem || typeof questSystem.getQuests !== "function") {
-    return () => {};
+const STORAGE_KEY = "lost_world_quests_v1";
+
+const DEFAULT_QUESTS = [
+  {
+    id: "goblin_hunter",
+    title: "Pemburu Goblin",
+    description: "Kalahkan 5 Goblin.",
+    target: "Goblin",
+    required: 5,
+    rewardXP: 100,
+    rewardGold: 50,
+  },
+  {
+    id: "forest_gatherer",
+    title: "Pengumpul Hutan",
+    description: "Kumpulkan 10 Wood.",
+    target: "Wood",
+    required: 10,
+    rewardXP: 75,
+    rewardGold: 30,
+  },
+  {
+    id: "skeleton_slayer",
+    title: "Penakluk Tengkorak",
+    description: "Kalahkan 3 Skeleton.",
+    target: "Skeleton",
+    required: 3,
+    rewardXP: 150,
+    rewardGold: 75,
+  },
+];
+
+export function createQuestSystem(playerStats, inventory) {
+  const quests = DEFAULT_QUESTS.map((quest) => ({
+    ...quest,
+    progress: 0,
+    accepted: false,
+    completed: false,
+    claimed: false,
+  }));
+
+  function getQuests() {
+    return quests.map((quest) => ({ ...quest }));
   }
 
-  const style = document.createElement("style");
+  function acceptQuest(id) {
+    const quest = quests.find((item) => item.id === id);
 
-  style.textContent = `
-    #quest-panel {
-      position: fixed;
-      top: 12px;
-      right: 12px;
-      width: min(300px, 82vw);
-      max-height: 70vh;
-      overflow-y: auto;
-      z-index: 1000;
-      display: none;
-      padding: 14px;
-      color: white;
-      background: rgba(15, 25, 35, 0.95);
-      border: 1px solid #b99b55;
-      border-radius: 12px;
-      font-family: Arial, sans-serif;
+    if (!quest || quest.accepted || quest.claimed) {
+      return false;
     }
 
-    #quest-panel h2 {
-      margin: 0 0 12px;
-      color: #f3d27a;
-      font-size: 20px;
+    quest.accepted = true;
+    return true;
+  }
+
+  function addProgress(target, amount = 1) {
+    if (
+      typeof target !== "string" ||
+      !Number.isFinite(amount) ||
+      amount <= 0
+    ) {
+      return false;
     }
 
-    .quest-card {
-      padding: 10px;
-      margin-bottom: 10px;
-      background: rgba(255,255,255,0.08);
-      border-radius: 8px;
-    }
+    let changed = false;
 
-    .quest-card h3 {
-      margin: 0 0 6px;
-      font-size: 15px;
-    }
-
-    .quest-card p {
-      margin: 5px 0;
-      font-size: 12px;
-    }
-
-    .quest-card button,
-    #quest-toggle {
-      padding: 9px 12px;
-      color: white;
-      background: #75552b;
-      border: 1px solid #d6b66a;
-      border-radius: 7px;
-      font-weight: bold;
-    }
-
-    .quest-card button:disabled {
-      opacity: 0.5;
-    }
-
-    #quest-toggle {
-      position: fixed;
-      top: 12px;
-      left: 12px;
-      z-index: 1001;
-    }
-  `;
-
-  document.head.appendChild(style);
-
-  const toggle = document.createElement("button");
-  toggle.id = "quest-toggle";
-  toggle.textContent = "QUEST";
-
-  const panel = document.createElement("section");
-  panel.id = "quest-panel";
-
-  const heading = document.createElement("h2");
-  heading.textContent = "Daftar Misi";
-
-  const list = document.createElement("div");
-  list.id = "quest-list";
-
-  panel.append(heading, list);
-  document.body.append(toggle, panel);
-
-  function render() {
-    list.replaceChildren();
-
-    for (const quest of questSystem.getQuests()) {
-      const card = document.createElement("article");
-      card.className = "quest-card";
-
-      const title = document.createElement("h3");
-      title.textContent = quest.title;
-
-      const description = document.createElement("p");
-      description.textContent = quest.description;
-
-      const progress = document.createElement("p");
-      progress.textContent =
-        `Progres: ${quest.progress}/${quest.required}`;
-
-      const reward = document.createElement("p");
-      reward.textContent = `Hadiah: ${quest.rewardXP} XP`;
-
-      const action = document.createElement("button");
-
-      if (quest.claimed) {
-        action.textContent = "Hadiah Diambil";
-        action.disabled = true;
-      } else if (quest.completed) {
-        action.textContent = "Ambil Hadiah";
-
-        action.addEventListener("click", () => {
-          questSystem.claimReward(quest.id);
-          render();
-        });
-      } else if (quest.accepted) {
-        action.textContent = "Sedang Berjalan";
-        action.disabled = true;
-      } else {
-        action.textContent = "Terima Misi";
-
-        action.addEventListener("click", () => {
-          questSystem.acceptQuest(quest.id);
-          render();
-        });
+    for (const quest of quests) {
+      if (
+        !quest.accepted ||
+        quest.completed ||
+        quest.claimed ||
+        quest.target !== target
+      ) {
+        continue;
       }
 
-      card.append(title, description, progress, reward, action);
-      list.appendChild(card);
+      quest.progress = Math.min(
+        quest.required,
+        quest.progress + Math.floor(amount)
+      );
+
+      if (quest.progress >= quest.required) {
+        quest.completed = true;
+      }
+
+      changed = true;
+    }
+
+    return changed;
+  }
+
+  function claimReward(id) {
+    const quest = quests.find((item) => item.id === id);
+
+    if (!quest || !quest.completed || quest.claimed) {
+      return false;
+    }
+
+    if (
+      !playerStats ||
+      typeof playerStats.addXP !== "function" ||
+      typeof playerStats.addGold !== "function"
+    ) {
+      return false;
+    }
+
+    const xpResult = playerStats.addXP(quest.rewardXP);
+
+    if (xpResult === false) {
+      return false;
+    }
+
+    const goldResult = playerStats.addGold(quest.rewardGold);
+
+    if (goldResult === false) {
+      return false;
+    }
+
+    quest.claimed = true;
+    return true;
+  }
+
+  function saveQuests() {
+    try {
+      if (typeof localStorage === "undefined") return false;
+
+      localStorage.setItem(
+        STORAGE_KEY,
+        JSON.stringify({
+          version: 1,
+          quests: quests.map((quest) => ({
+            id: quest.id,
+            progress: quest.progress,
+            accepted: quest.accepted,
+            completed: quest.completed,
+            claimed: quest.claimed,
+          })),
+        })
+      );
+
+      return true;
+    } catch (error) {
+      console.error("Gagal menyimpan quest:", error);
+      return false;
     }
   }
 
-  toggle.addEventListener("click", () => {
-    const isOpen = panel.style.display === "block";
-    panel.style.display = isOpen ? "none" : "block";
+  function loadQuests() {
+    try {
+      if (typeof localStorage === "undefined") return false;
 
-    if (!isOpen) render();
-  });
+      const raw = localStorage.getItem(STORAGE_KEY);
+      if (!raw) return false;
 
-  render();
+      const saved = JSON.parse(raw);
 
-  return function disposeQuestUI() {
-    toggle.remove();
-    panel.remove();
-    style.remove();
+      if (
+        !saved ||
+        saved.version !== 1 ||
+        !Array.isArray(saved.quests)
+      ) {
+        return false;
+      }
+
+      for (const savedQuest of saved.quests) {
+        if (!savedQuest || typeof savedQuest.id !== "string") {
+          continue;
+        }
+
+        const quest = quests.find(
+          (item) => item.id === savedQuest.id
+        );
+
+        if (!quest) continue;
+
+        const progress = Number(savedQuest.progress);
+
+        if (!Number.isFinite(progress) || progress < 0) {
+          continue;
+        }
+
+        quest.progress = Math.min(
+          quest.required,
+          Math.floor(progress)
+        );
+
+        quest.accepted = Boolean(savedQuest.accepted);
+        quest.completed =
+          Boolean(savedQuest.completed) ||
+          quest.progress >= quest.required;
+
+        quest.claimed = Boolean(savedQuest.claimed);
+
+        if (quest.claimed) {
+          quest.accepted = true;
+          quest.completed = true;
+        }
+      }
+
+      return true;
+    } catch (error) {
+      console.error("Gagal memuat quest:", error);
+      return false;
+    }
+  }
+
+  function resetQuests() {
+    for (const quest of quests) {
+      quest.progress = 0;
+      quest.accepted = false;
+      quest.completed = false;
+      quest.claimed = false;
+    }
+
+    try {
+      if (typeof localStorage !== "undefined") {
+        localStorage.removeItem(STORAGE_KEY);
+      }
+    } catch (error) {
+      console.error("Gagal mereset quest:", error);
+    }
+
+    return true;
+  }
+
+  return {
+    getQuests,
+    acceptQuest,
+    addProgress,
+    claimReward,
+    saveQuests,
+    loadQuests,
+    resetQuests,
   };
 }
