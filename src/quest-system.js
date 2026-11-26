@@ -12,7 +12,7 @@ export function createQuestSystem(playerStats, inventory) {
       progress: 0,
       rewardXP: 100,
       rewardItems: [
-        { name: "Health Potion", amount: 2 }
+        { name: "Health Potion", amount: 2, type: "Consumable" }
       ],
       accepted: false,
       completed: false,
@@ -27,7 +27,7 @@ export function createQuestSystem(playerStats, inventory) {
       progress: 0,
       rewardXP: 150,
       rewardItems: [
-        { name: "Goblin Token", amount: 2 }
+        { name: "Goblin Token", amount: 2, type: "Quest" }
       ],
       accepted: false,
       completed: false,
@@ -42,7 +42,7 @@ export function createQuestSystem(playerStats, inventory) {
       progress: 0,
       rewardXP: 75,
       rewardItems: [
-        { name: "Health Potion", amount: 1 }
+        { name: "Health Potion", amount: 1, type: "Consumable" }
       ],
       accepted: false,
       completed: false,
@@ -223,8 +223,11 @@ export function createQuestSystem(playerStats, inventory) {
       return false;
     }
 
-    if (!inventory || typeof inventory.addItem !== "function") {
-      if (quest.rewardItems.length > 0) return false;
+    if (
+      quest.rewardItems.length > 0 &&
+      (!inventory || typeof inventory.addItem !== "function")
+    ) {
+      return false;
     }
 
     const addedItems = [];
@@ -233,14 +236,15 @@ export function createQuestSystem(playerStats, inventory) {
       const added = inventory.addItem(
         item.name,
         item.amount,
-        "Consumable"
+        item.type
       );
 
       if (!added) {
         for (const rollback of addedItems) {
           inventory.removeItem(
             rollback.name,
-            rollback.amount
+            rollback.amount,
+            rollback.type
           );
         }
 
@@ -255,7 +259,20 @@ export function createQuestSystem(playerStats, inventory) {
     }
 
     quest.claimed = true;
-    saveQuests();
+
+    if (!saveQuests()) {
+      quest.claimed = false;
+
+      for (const rollback of addedItems) {
+        inventory.removeItem(
+          rollback.name,
+          rollback.amount,
+          rollback.type
+        );
+      }
+
+      return false;
+    }
 
     return true;
   }
@@ -277,4 +294,4 @@ export function createQuestSystem(playerStats, inventory) {
     loadQuests,
     deleteQuestSave
   };
-      }
+}
