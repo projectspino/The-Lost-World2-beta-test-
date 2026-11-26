@@ -1,3 +1,4 @@
+
 const SAVE_KEY = "the_lost_world_save_v1";
 
 export class SaveSystem {
@@ -8,8 +9,10 @@ export class SaveSystem {
   checkStorage() {
     try {
       const testKey = "__tlw_storage_test__";
+
       localStorage.setItem(testKey, "test");
       localStorage.removeItem(testKey);
+
       return true;
     } catch {
       return false;
@@ -47,7 +50,9 @@ export class SaveSystem {
         success: true,
         message: "Permainan berhasil disimpan."
       };
-    } catch {
+    } catch (error) {
+      console.error("Save error:", error);
+
       return {
         success: false,
         message: "Gagal menyimpan permainan."
@@ -56,9 +61,7 @@ export class SaveSystem {
   }
 
   load() {
-    if (!this.storageAvailable) {
-      return null;
-    }
+    if (!this.storageAvailable) return null;
 
     try {
       const rawData = localStorage.getItem(SAVE_KEY);
@@ -68,15 +71,18 @@ export class SaveSystem {
       const saveData = JSON.parse(rawData);
 
       if (
+        !saveData ||
         saveData.version !== 1 ||
         !saveData.data ||
-        typeof saveData.data !== "object"
+        typeof saveData.data !== "object" ||
+        Array.isArray(saveData.data)
       ) {
         return null;
       }
 
       return saveData;
-    } catch {
+    } catch (error) {
+      console.error("Load error:", error);
       return null;
     }
   }
@@ -91,7 +97,8 @@ export class SaveSystem {
     try {
       localStorage.removeItem(SAVE_KEY);
       return true;
-    } catch {
+    } catch (error) {
+      console.error("Delete save error:", error);
       return false;
     }
   }
@@ -100,4 +107,4 @@ export class SaveSystem {
     const saveData = this.load();
     return saveData?.savedAt ?? null;
   }
-      }
+}
