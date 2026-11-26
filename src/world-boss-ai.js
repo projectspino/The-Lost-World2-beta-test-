@@ -1,5 +1,5 @@
 
-class WorldBossAI {
+export class WorldBossAI {
   constructor(boss, options = {}) {
     this.boss = boss;
     this.target = null;
@@ -19,7 +19,6 @@ class WorldBossAI {
 
   setTarget(target) {
     if (this.disposed) return false;
-
     this.target = target || null;
     return true;
   }
@@ -44,20 +43,27 @@ class WorldBossAI {
 
   getPosition(entity) {
     if (!entity) return null;
-
     if (entity.position) return entity.position;
     if (entity.mesh?.position) return entity.mesh.position;
-
     return null;
   }
 
   update(deltaTime) {
-    if (this.disposed || !this.boss) return;
+    if (
+      this.disposed ||
+      !Number.isFinite(deltaTime) ||
+      deltaTime <= 0 ||
+      !this.boss
+    ) return;
 
     const bossMesh = this.boss.mesh || this.boss;
-    if (!bossMesh || bossMesh.isDisposed?.()) return;
 
-    const bossPosition = this.getPosition(bossMesh);
+    if (!bossMesh || bossMesh.isDisposed?.()) {
+      this.setState("idle");
+      return;
+    }
+
+    const bossPosition = bossMesh.position;
     const targetPosition = this.getPosition(this.target);
 
     if (!bossPosition || !targetPosition) {
@@ -69,7 +75,10 @@ class WorldBossAI {
     const dz = targetPosition.z - bossPosition.z;
     const distance = Math.sqrt(dx * dx + dz * dz);
 
-    this.attackTimer = Math.max(0, this.attackTimer - Math.max(0, deltaTime));
+    this.attackTimer = Math.max(
+      0,
+      this.attackTimer - deltaTime
+    );
 
     if (distance > this.detectionRange) {
       this.setState("idle");
@@ -87,7 +96,7 @@ class WorldBossAI {
             this.onAttack({
               boss: this.boss,
               target: this.target,
-              damage: this.attackDamage,
+              damage: this.attackDamage
             });
           } catch (error) {
             console.error("WorldBossAI attack callback error:", error);
@@ -119,18 +128,19 @@ class WorldBossAI {
     bossMesh.position.x += (dx / distance) * step;
     bossMesh.position.z += (dz / distance) * step;
 
-    if (typeof bossMesh.rotation?.y === "number") {
+    if (bossMesh.rotation) {
       bossMesh.rotation.y = Math.atan2(dx, dz);
     }
   }
 
   dispose() {
+    if (this.disposed) return;
+
+    this.setState("idle");
     this.disposed = true;
     this.target = null;
     this.onAttack = null;
     this.onStateChange = null;
-    this.setState("idle");
+    this.boss = null;
   }
 }
-
-export { WorldBossAI };
