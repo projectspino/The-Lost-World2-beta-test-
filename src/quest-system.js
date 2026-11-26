@@ -99,20 +99,32 @@ export function createQuestSystem(playerStats, inventory) {
 
       const data = JSON.parse(savedData);
 
-      if (!data || !Array.isArray(data.quests)) {
+      if (
+        !data ||
+        data.version !== 1 ||
+        !Array.isArray(data.quests)
+      ) {
         return false;
       }
 
-      data.quests.forEach(savedQuest => {
-        if (!savedQuest || typeof savedQuest.id !== "string") {
-          return;
+      const loadedIds = new Set();
+
+      for (const savedQuest of data.quests) {
+        if (
+          !savedQuest ||
+          typeof savedQuest.id !== "string" ||
+          loadedIds.has(savedQuest.id)
+        ) {
+          continue;
         }
+
+        loadedIds.add(savedQuest.id);
 
         const quest = quests.find(
           item => item.id === savedQuest.id
         );
 
-        if (!quest) return;
+        if (!quest) continue;
 
         const progress = Number(savedQuest.progress);
 
@@ -131,7 +143,7 @@ export function createQuestSystem(playerStats, inventory) {
           quest.accepted = true;
           quest.completed = true;
         }
-      });
+      }
 
       return true;
     } catch (error) {
@@ -211,21 +223,34 @@ export function createQuestSystem(playerStats, inventory) {
       return false;
     }
 
-    if (inventory) {
-      for (const item of quest.rewardItems) {
-        const added = inventory.addItem(
-          item.name,
-          item.amount,
-          "Consumable"
-        );
-
-        if (!added) {
-          return false;
-        }
-      }
+    if (!inventory || typeof inventory.addItem !== "function") {
+      if (quest.rewardItems.length > 0) return false;
     }
 
-    if (playerStats) {
+    const addedItems = [];
+
+    for (const item of quest.rewardItems) {
+      const added = inventory.addItem(
+        item.name,
+        item.amount,
+        "Consumable"
+      );
+
+      if (!added) {
+        for (const rollback of addedItems) {
+          inventory.removeItem(
+            rollback.name,
+            rollback.amount
+          );
+        }
+
+        return false;
+      }
+
+      addedItems.push(item);
+    }
+
+    if (playerStats && typeof playerStats.addXP === "function") {
       playerStats.addXP(quest.rewardXP);
     }
 
@@ -252,4 +277,4 @@ export function createQuestSystem(playerStats, inventory) {
     loadQuests,
     deleteQuestSave
   };
-}
+      }
