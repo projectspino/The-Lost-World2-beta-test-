@@ -1,5 +1,6 @@
 
 import * as BABYLON from "@babylonjs/core";
+import { createMonster } from "./characters/monsters/monster-factory.js";
 
 export function createCombatSystem(
   scene,
@@ -19,53 +20,40 @@ export function createCombatSystem(
   const goblins = [];
   let disposed = false;
 
-  const goblinMaterial = new BABYLON.StandardMaterial(
-    "goblin-material",
-    scene
-  );
-  goblinMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.55, 0.18);
-
-  const eyeMaterial = new BABYLON.StandardMaterial(
-    "goblin-eye-material",
-    scene
-  );
-  eyeMaterial.diffuseColor = new BABYLON.Color3(1, 0.8, 0.1);
+  // =====================================
+  // GOBLIN - CHARACTER FACTORY
+  // =====================================
 
   for (let i = 0; i < 5; i++) {
-    const mesh = BABYLON.MeshBuilder.CreateCapsule(
-      `goblin-${i}`,
-      { height: 1.7, radius: 0.4 },
-      scene
-    );
+    const monster = createMonster(scene, "Goblin", {
+      position: new BABYLON.Vector3(
+        8 + (i % 3) * 4,
+        0,
+        8 + Math.floor(i / 3) * 5
+      )
+    });
 
-    mesh.position.set(
-      8 + (i % 3) * 4,
-      0.85,
-      8 + Math.floor(i / 3) * 5
-    );
-
-    mesh.material = goblinMaterial;
-
-    const eye = BABYLON.MeshBuilder.CreateSphere(
-      `goblin-eye-${i}`,
-      { diameter: 0.12 },
-      scene
-    );
-
-    eye.parent = mesh;
-    eye.position.set(0, 0.25, -0.36);
-    eye.material = eyeMaterial;
+    monster.root.metadata = {
+      entityType: "enemy",
+      enemyName: "Goblin",
+      enemyId: `goblin-${i}`
+    };
 
     goblins.push({
       id: `goblin-${i}`,
       name: "Goblin",
-      mesh,
+      mesh: monster.root,
+      monster,
       hp: 100,
       maxHp: 100,
       alive: true,
       rewarded: false
     });
   }
+
+  // =====================================
+  // BOSS HEALTH BAR
+  // =====================================
 
   const bossBar = document.createElement("div");
 
@@ -171,6 +159,10 @@ export function createCombatSystem(
   const bossBarObserver =
     scene.onBeforeRenderObservable.add(updateBossBar);
 
+  // =====================================
+  // DAMAGE
+  // =====================================
+
   function getAttackDamage() {
     const baseDamage = 25;
 
@@ -186,6 +178,10 @@ export function createCombatSystem(
 
     return Math.max(1, baseDamage + bonus);
   }
+
+  // =====================================
+  // REWARD
+  // =====================================
 
   function giveFallbackReward(enemy) {
     if (!playerStats) return;
@@ -240,15 +236,20 @@ export function createCombatSystem(
     giveFallbackReward(enemy);
   }
 
+  // =====================================
+  // ENEMY DEFEAT
+  // =====================================
+
   function defeatEnemy(enemy) {
     if (!enemy || enemy.rewarded) return;
 
     enemy.alive = false;
-    enemy.rewarded = true;
 
-    giveEnemyReward({ ...enemy, rewarded: false });
+    giveEnemyReward(enemy);
 
-    if (isMeshValid(enemy.mesh)) {
+    if (enemy.monster && typeof enemy.monster.dispose === "function") {
+      enemy.monster.dispose();
+    } else if (isMeshValid(enemy.mesh)) {
       enemy.mesh.dispose();
     }
 
@@ -265,6 +266,10 @@ export function createCombatSystem(
 
     updateBossBar();
   }
+
+  // =====================================
+  // TARGET
+  // =====================================
 
   function getAllTargets() {
     const targets = [];
@@ -294,6 +299,10 @@ export function createCombatSystem(
     return targets;
   }
 
+  // =====================================
+  // ATTACK
+  // =====================================
+
   function attack() {
     if (disposed || !player || player.isDisposed?.()) return;
 
@@ -319,12 +328,9 @@ export function createCombatSystem(
 
     if (nearestTarget.source === "goblin") {
       enemy.hp = Math.max(0, enemy.hp - damage);
-      enemy.mesh.scaling.set(1.15, 0.9, 1.15);
 
       if (enemy.hp <= 0) {
         defeatEnemy(enemy);
-      } else {
-        enemy.mesh.scaling.set(1, 1, 1);
       }
     } else {
       if (!enemyAI || typeof enemyAI.damageEnemy !== "function") {
@@ -344,23 +350,30 @@ export function createCombatSystem(
 
   attackButton.addEventListener("click", attack);
 
+  // =====================================
+  // DISPOSE
+  // =====================================
+
   return function disposeCombatSystem() {
     if (disposed) return;
 
     disposed = true;
-    attackButton.removeEventListener("click", attack);
 
+    attackButton.removeEventListener("click", attack);
     scene.onBeforeRenderObservable.remove(bossBarObserver);
     bossBar.remove();
 
     for (const goblin of goblins) {
-      if (isMeshValid(goblin.mesh)) {
+      if (
+        goblin.monster &&
+        typeof goblin.monster.dispose === "function"
+      ) {
+        goblin.monster.dispose();
+      } else if (isMeshValid(goblin.mesh)) {
         goblin.mesh.dispose();
       }
     }
 
     goblins.length = 0;
-    goblinMaterial.dispose();
-    eyeMaterial.dispose();
   };
-        }
+}
