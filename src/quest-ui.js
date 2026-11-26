@@ -6,7 +6,7 @@ export function createQuestUI(questSystem) {
   style.textContent = `
     #quest-panel {
       position: fixed;
-      top: 12px;
+      top: 55px;
       right: 12px;
       width: min(300px, 82vw);
       max-height: 70vh;
@@ -15,37 +15,21 @@ export function createQuestUI(questSystem) {
       display: none;
       padding: 14px;
       color: white;
-      background: rgba(15, 25, 35, 0.95);
+      background: rgba(15,25,35,.95);
       border: 1px solid #b99b55;
       border-radius: 12px;
-      font-family: Arial, sans-serif;
+      font-family: Arial,sans-serif;
     }
-
-    #quest-panel h2 {
-      margin: 0 0 12px;
-      color: #f3d27a;
-      font-size: 20px;
-    }
-
+    #quest-panel h2 { color: #f3d27a; }
     .quest-card {
       padding: 10px;
       margin-bottom: 10px;
-      background: rgba(255,255,255,0.08);
+      background: rgba(255,255,255,.08);
       border-radius: 8px;
     }
-
-    .quest-card h3 {
-      margin: 0 0 6px;
-      font-size: 15px;
-    }
-
-    .quest-card p {
-      margin: 5px 0;
-      font-size: 12px;
-    }
-
-    .quest-card button,
-    #quest-toggle {
+    .quest-card h3 { margin: 0 0 6px; }
+    .quest-card p { font-size: 12px; }
+    .quest-card button, #quest-toggle {
       padding: 9px 12px;
       color: white;
       background: #75552b;
@@ -53,11 +37,6 @@ export function createQuestUI(questSystem) {
       border-radius: 7px;
       font-weight: bold;
     }
-
-    .quest-card button:disabled {
-      opacity: 0.5;
-    }
-
     #quest-toggle {
       position: fixed;
       top: 12px;
@@ -74,17 +53,18 @@ export function createQuestUI(questSystem) {
 
   const panel = document.createElement("section");
   panel.id = "quest-panel";
-  panel.innerHTML = "<h2>Daftar Misi</h2><div id='quest-list'></div>";
 
+  const heading = document.createElement("h2");
+  heading.textContent = "Daftar Misi";
+
+  const list = document.createElement("div");
+  panel.append(heading, list);
   document.body.append(toggle, panel);
 
   function render() {
-    const list = panel.querySelector("#quest-list");
-    const quests = questSystem.getQuests();
-
     list.replaceChildren();
 
-    quests.forEach(quest => {
+    for (const quest of questSystem.getQuests()) {
       const card = document.createElement("article");
       card.className = "quest-card";
 
@@ -99,7 +79,8 @@ export function createQuestUI(questSystem) {
         `Progres: ${quest.progress}/${quest.required}`;
 
       const reward = document.createElement("p");
-      reward.textContent = `Hadiah: ${quest.rewardXP} XP`;
+      reward.textContent =
+        `Hadiah: ${quest.rewardXP} XP + ${quest.rewardGold} Gold`;
 
       const action = document.createElement("button");
 
@@ -119,20 +100,20 @@ export function createQuestUI(questSystem) {
         action.textContent = "Terima Misi";
         action.addEventListener("click", () => {
           questSystem.acceptQuest(quest.id);
+          questSystem.saveQuests?.();
           render();
         });
       }
 
       card.append(title, description, progress, reward, action);
       list.appendChild(card);
-    });
+    }
   }
 
   toggle.addEventListener("click", () => {
-    const isOpen = panel.style.display === "block";
-    panel.style.display = isOpen ? "none" : "block";
-
-    if (!isOpen) render();
+    const open = panel.style.display === "block";
+    panel.style.display = open ? "none" : "block";
+    if (!open) render();
   });
 
   render();
@@ -142,4 +123,4 @@ export function createQuestUI(questSystem) {
     panel.remove();
     style.remove();
   };
-        }
+}
