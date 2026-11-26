@@ -12,67 +12,54 @@ export function createCombatSystem(
   equipmentSystem = null,
   lootSystem = null
 ) {
+  if (!scene || !player || !attackButton) {
+    throw new Error("Scene, player, dan attackButton wajib tersedia.");
+  }
+
   const goblins = [];
   let disposed = false;
-
-  const goldRewards = {
-    Goblin: 5,
-    Skeleton: 8,
-    "Dire Wolf": 10,
-    Orc: 15,
-    "Ancient Golem": 250
-  };
-
-  const xpRewards = {
-    Goblin: 25,
-    Skeleton: 25,
-    "Dire Wolf": 25,
-    Orc: 40,
-    "Ancient Golem": 300
-  };
 
   const goblinMaterial = new BABYLON.StandardMaterial(
     "goblin-material",
     scene
   );
-  goblinMaterial.diffuseColor =
-    new BABYLON.Color3(0.2, 0.55, 0.18);
+  goblinMaterial.diffuseColor = new BABYLON.Color3(0.2, 0.55, 0.18);
 
   const eyeMaterial = new BABYLON.StandardMaterial(
     "goblin-eye-material",
     scene
   );
-  eyeMaterial.diffuseColor =
-    new BABYLON.Color3(1, 0.8, 0.1);
+  eyeMaterial.diffuseColor = new BABYLON.Color3(1, 0.8, 0.1);
 
   for (let i = 0; i < 5; i++) {
-    const goblin = BABYLON.MeshBuilder.CreateCapsule(
-      "goblin-" + i,
+    const mesh = BABYLON.MeshBuilder.CreateCapsule(
+      `goblin-${i}`,
       { height: 1.7, radius: 0.4 },
       scene
     );
 
-    goblin.position.set(
+    mesh.position.set(
       8 + (i % 3) * 4,
       0.85,
       8 + Math.floor(i / 3) * 5
     );
 
-    goblin.material = goblinMaterial;
+    mesh.material = goblinMaterial;
 
     const eye = BABYLON.MeshBuilder.CreateSphere(
-      "goblin-eye-" + i,
+      `goblin-eye-${i}`,
       { diameter: 0.12 },
       scene
     );
 
-    eye.parent = goblin;
+    eye.parent = mesh;
     eye.position.set(0, 0.25, -0.36);
     eye.material = eyeMaterial;
 
     goblins.push({
+      id: `goblin-${i}`,
       name: "Goblin",
-      mesh: goblin,
+      mesh,
       hp: 100,
       maxHp: 100,
       alive: true,
@@ -141,6 +128,10 @@ export function createCombatSystem(
   bossBar.appendChild(bossHealthText);
   document.body.appendChild(bossBar);
 
+  function isMeshValid(mesh) {
+    return Boolean(mesh && !mesh.isDisposed());
+  }
+
   function updateBossBar() {
     if (disposed || !player || !enemyAI) {
       bossBar.style.display = "none";
@@ -154,8 +145,7 @@ export function createCombatSystem(
     if (
       !boss ||
       !boss.alive ||
-      !boss.mesh ||
-      boss.mesh.isDisposed()
+      !isMeshValid(boss.mesh)
     ) {
       bossBar.style.display = "none";
       return;
@@ -177,7 +167,7 @@ export function createCombatSystem(
     );
 
     bossBar.style.display = "block";
-    bossFill.style.width = percentage + "%";
+    bossFill.style.width = `${percentage}%`;
     bossHealthText.textContent =
       `${Math.ceil(boss.health)} / ${boss.maxHealth} HP`;
   }
@@ -188,71 +178,73 @@ export function createCombatSystem(
   function getAttackDamage() {
     const baseDamage = 25;
 
-    if (!equipmentSystem) return baseDamage;
+    if (
+      !equipmentSystem ||
+      typeof equipmentSystem.getBonuses !== "function"
+    ) {
+      return baseDamage;
+    }
 
-    const bonuses = equipmentSystem.getBonuses();
+    const bonuses = equipmentSystem.getBonuses() ?? {};
+    const bonus = Number(bonuses.attack) || 0;
 
-    return baseDamage + Math.max(0, bonuses.attack || 0);
+    return Math.max(1, baseDamage + bonus);
   }
 
-  function giveLegacyLoot(enemyName) {
-    if (!inventory) return;
+  function giveFallbackReward(enemy) {
+    if (!playerStats) return;
 
-    const lootTables = {
-      Goblin: [
-        { name: "Goblin Token", type: "Quest", chance: 0.8 },
-        { name: "Wood", type: "Material", chance: 0.5 },
-        { name: "Health Potion", type: "Consumable", chance: 0.2 }
-      ],
-      Skeleton: [
-        { name: "Bone", type: "Material", chance: 0.8 },
-        { name: "Old Coin", type: "Quest", chance: 0.3 }
-      ],
-      "Dire Wolf": [
-        { name: "Wolf Pelt", type: "Material", chance: 0.8 },
-        { name: "Wolf Fang", type: "Material", chance: 0.5 }
-      ],
-      Orc: [
-        { name: "Orc Token", type: "Quest", chance: 0.7 },
-        { name: "Iron Ore", type: "Material", chance: 0.5 },
-        { name: "Health Potion", type: "Consumable", chance: 0.3 }
-      ],
-      "Ancient Golem": [
-        { name: "Ancient Core", type: "Quest", chance: 1 }
-      ]
+    const rewards = {
+      Goblin: { xp: 25, gold: 5 },
+      Skeleton: { xp: 40, gold: 10 },
+      "Dire Wolf": { xp: 50, gold: 15 },
+      Orc: { xp: 60, gold: 20 },
+      "Ancient Golem": { xp: 300, gold: 250 }
     };
 
-    const loot = lootTables[enemyName] || [];
+    const reward = rewards[enemy.name] ?? {
+      xp: 10,
+      gold: 0
+    };
 
-    for (const item of loot) {
-      if (Math.random() < item.chance) {
-        inventory.addItem(item.name, 1, item.type);
-      }
+    if (typeof playerStats.addXP === "function") {
+      playerStats.addXP(reward.xp);
+    }
+
+    if (
+      reward.gold > 0 &&
+      typeof playerStats.addGold === "function"
+    ) {
+      playerStats.addGold(reward.gold);
     }
   }
 
   function giveEnemyReward(enemy) {
-    if (enemy.rewarded) return;
+    if (!enemy || enemy.rewarded) return;
 
     enemy.rewarded = true;
 
-    if (lootSystem && typeof lootSystem.rewardMonster === "function") {
-      const result = lootSystem.rewardMonster(enemy);
+    if (
+      lootSystem &&
+      typeof lootSystem.rewardMonster === "function"
+    ) {
+      try {
+        const result = lootSystem.rewardMonster(enemy);
 
-      if (result.success) return;
-    }
-
-    if (playerStats) {
-      playerStats.addXP(xpRewards[enemy.name] || 25);
-
-      const gold = goldRewards[enemy.name] || 0;
-
-      if (gold > 0 && playerStats.addGold) {
-        playerStats.addGold(gold);
+        if (!result?.success) {
+          console.warn(
+            "Hadiah monster tidak berhasil diproses:",
+            result?.message ?? "Tidak diketahui"
+          );
+        }
+      } catch (error) {
+        console.error("Monster reward error:", error);
       }
+
+      return;
     }
 
-    giveLegacyLoot(enemy.name);
+    giveFallbackReward(enemy);
   }
 
   function defeatEnemy(enemy) {
@@ -262,12 +254,19 @@ export function createCombatSystem(
 
     giveEnemyReward(enemy);
 
-    if (enemy.mesh && !enemy.mesh.isDisposed()) {
+    if (isMeshValid(enemy.mesh)) {
       enemy.mesh.dispose();
     }
 
-    if (questSystem) {
-      questSystem.addProgress(enemy.name, 1);
+    if (
+      questSystem &&
+      typeof questSystem.addProgress === "function"
+    ) {
+      try {
+        questSystem.addProgress(enemy.name, 1);
+      } catch (error) {
+        console.error("Quest progress error:", error);
+      }
     }
 
     updateBossBar();
@@ -277,31 +276,24 @@ export function createCombatSystem(
     const targets = [];
 
     for (const goblin of goblins) {
-      if (
-        goblin.alive &&
-        goblin.mesh &&
-        !goblin.mesh.isDisposed()
-      ) {
+      if (goblin.alive && isMeshValid(goblin.mesh)) {
         targets.push({
           enemy: goblin,
           mesh: goblin.mesh,
-          name: "Goblin",
           source: "goblin"
         });
       }
     }
 
-    if (enemyAI) {
+    if (
+      enemyAI &&
+      typeof enemyAI.getEnemies === "function"
+    ) {
       for (const enemy of enemyAI.getEnemies()) {
-        if (
-          enemy.alive &&
-          enemy.mesh &&
-          !enemy.mesh.isDisposed()
-        ) {
+        if (enemy.alive && isMeshValid(enemy.mesh)) {
           targets.push({
             enemy,
             mesh: enemy.mesh,
-            name: enemy.name,
             source: "enemyAI"
           });
         }
@@ -312,14 +304,14 @@ export function createCombatSystem(
   }
 
   function attack() {
-    if (disposed || !player) return;
-
-    const targets = getAllTargets();
+    if (disposed || !player || player.isDisposed?.()) {
+      return;
+    }
 
     let nearestTarget = null;
     let nearestDistance = 3.5;
 
-    for (const target of targets) {
+    for (const target of getAllTargets()) {
       const distance = BABYLON.Vector3.Distance(
         player.position,
         target.mesh.position
@@ -337,43 +329,27 @@ export function createCombatSystem(
     const damage = getAttackDamage();
 
     if (nearestTarget.source === "goblin") {
-      enemy.hp -= damage;
-      enemy.mesh.scaling.set(1.15, 0.9, 1.15);
+      enemy.hp = Math.max(0, enemy.hp - damage);
 
-      setTimeout(() => {
-        if (
-          !disposed &&
-          enemy.alive &&
-          enemy.mesh &&
-          !enemy.mesh.isDisposed()
-        ) {
-          enemy.mesh.scaling.set(1, 1, 1);
-        }
-      }, 120);
+      enemy.mesh.scaling.set(1.15, 0.9, 1.15);
 
       if (enemy.hp <= 0) {
         defeatEnemy(enemy);
+      } else {
+        enemy.mesh.scaling.set(1, 1, 1);
       }
     } else {
-      enemy.health -= damage;
-      enemy.mesh.scaling.set(1.15, 0.9, 1.15);
+      if (
+        !enemyAI ||
+        typeof enemyAI.damageEnemy !== "function"
+      ) {
+        console.warn("Enemy AI tidak menyediakan damageEnemy().");
+        return;
+      }
 
-      setTimeout(() => {
-        if (
-          !disposed &&
-          enemy.alive &&
-          enemy.mesh &&
-          !enemy.mesh.isDisposed()
-        ) {
-          enemy.mesh.scaling.setAll(
-            enemy.isBoss ? 1 :
-            enemy.name === "Orc" ? 1.25 :
-            enemy.name === "Dire Wolf" ? 0.8 : 0.9
-          );
-        }
-      }, 120);
+      enemyAI.damageEnemy(enemy, damage);
 
-      if (enemy.health <= 0) {
+      if (!enemy.alive || enemy.health <= 0) {
         defeatEnemy(enemy);
       }
     }
@@ -389,19 +365,23 @@ export function createCombatSystem(
     disposed = true;
 
     attackButton.removeEventListener("click", attack);
-    scene.onBeforeRenderObservable.remove(bossBarObserver);
 
-    if (bossBar.parentNode) {
-      bossBar.parentNode.removeChild(bossBar);
-    }
+    scene.onBeforeRenderObservable.remove(
+      bossBarObserver
+    );
+
+    bossBar.remove();
 
     for (const goblin of goblins) {
-      if (goblin.mesh && !goblin.mesh.isDisposed()) {
+      if (isMeshValid(goblin.mesh)) {
         goblin.mesh.dispose();
       }
     }
 
     goblins.length = 0;
+
+    goblinMaterial.dispose();
+    eyeMaterial.dispose();
   };
-}
-  
+                                       }
+    
