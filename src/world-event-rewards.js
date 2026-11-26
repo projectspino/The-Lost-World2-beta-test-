@@ -30,9 +30,8 @@ export class WorldEventRewards {
       const quantity = Number(reward.quantity);
 
       if (
-        !Number.isFinite(quantity) ||
-        quantity <= 0 ||
-        !Number.isInteger(quantity)
+        !Number.isInteger(quantity) ||
+        quantity <= 0
       ) {
         return false;
       }
@@ -44,15 +43,13 @@ export class WorldEventRewards {
         name !== "experience" &&
         name !== "xp" &&
         (!this.inventory ||
-          typeof this.inventory.addItem !== "function")
+          typeof this.inventory.addItem !== "function" ||
+          typeof this.inventory.removeItem !== "function")
       ) {
         return false;
       }
 
-      if (
-        name === "gold" &&
-        typeof this.onGold !== "function"
-      ) {
+      if (name === "gold" && typeof this.onGold !== "function") {
         return false;
       }
 
@@ -71,70 +68,54 @@ export class WorldEventRewards {
       });
     }
 
+    // Tandai sementara agar claim tidak bisa dipanggil berulang
+    // saat proses pemberian hadiah berlangsung.
+    this.claimedEvents.add(event.id);
+
     const addedItems = [];
+    let goldGranted = 0;
+    let experienceGranted = 0;
 
-    for (const reward of normalized) {
-      if (
-        reward.name === "gold" ||
-        reward.name === "experience" ||
-        reward.name === "xp"
-      ) {
-        continue;
-      }
+    try {
+      for (const reward of normalized) {
+        if (
+          reward.name === "gold" ||
+          reward.name === "experience" ||
+          reward.name === "xp"
+        ) continue;
 
-      let success = false;
-
-      try {
-        success = this.inventory.addItem(
+        const success = this.inventory.addItem(
           reward.originalName,
           reward.quantity,
           reward.type
         );
-      } catch (error) {
-        console.error("Event reward error:", error);
-      }
 
-      if (!success) {
-        for (const item of addedItems) {
-          try {
-            this.inventory.removeItem(
-              item.name,
-              item.quantity,
-              item.type
-            );
-          } catch (error) {
-            console.error("Reward rollback error:", error);
-          }
+        if (!success) {
+          throw new Error(`Gagal menambahkan ${reward.originalName}`);
         }
 
-        return false;
+        addedItems.push(reward);
       }
 
-      addedItems.push({
-        name: reward.originalName,
-        quantity: reward.quantity,
-        type: reward.type
-      });
-    }
-
-    try {
       for (const reward of normalized) {
         if (reward.name === "gold") {
           this.onGold(reward.quantity);
+          goldGranted += reward.quantity;
         } else if (
           reward.name === "experience" ||
           reward.name === "xp"
         ) {
           this.onExperience(reward.quantity);
+          experienceGranted += reward.quantity;
         }
       }
     } catch (error) {
-      console.error("Event reward callback error:", error);
+      console.error("Event reward error:", error);
 
-      for (const item of addedItems) {
+      for (const item of addedItems.reverse()) {
         try {
           this.inventory.removeItem(
-            item.name,
+            item.originalName,
             item.quantity,
             item.type
           );
@@ -143,10 +124,15 @@ export class WorldEventRewards {
         }
       }
 
+      // Callback gold/experience tidak memiliki mekanisme
+      // rollback pada API yang tersedia.
+      if (goldGranted || experienceGranted) {
+        console.error("Sebagian reward currency mungkin sudah diberikan.");
+      }
+
+      this.claimedEvents.delete(event.id);
       return false;
     }
-
-    this.claimedEvents.add(event.id);
 
     if (typeof this.onReward === "function") {
       try {
