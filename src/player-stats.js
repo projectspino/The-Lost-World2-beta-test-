@@ -35,6 +35,7 @@ export function createPlayerStats() {
     while (stats.xp >= stats.xpToNextLevel) {
       stats.xp -= stats.xpToNextLevel;
       stats.level += 1;
+
       stats.xpToNextLevel = Math.floor(
         stats.xpToNextLevel * 1.25
       );
@@ -125,10 +126,7 @@ export function createPlayerStats() {
     }
 
     dead = false;
-    stats.hp = Math.min(
-      stats.maxHp,
-      Math.floor(value)
-    );
+    stats.hp = Math.min(stats.maxHp, Math.floor(value));
 
     updateUI();
     return true;
@@ -162,7 +160,6 @@ export function createPlayerStats() {
   function loadGame() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-
       if (!raw) return false;
 
       const saved = JSON.parse(raw);
@@ -205,7 +202,7 @@ export function createPlayerStats() {
       }
 
       for (const field of fields) {
-        stats[field] = saved.stats[field];
+        stats[field] = Number(saved.stats[field]);
       }
 
       dead = Boolean(saved.dead);
@@ -248,4 +245,4 @@ export function createPlayerStats() {
     updateUI,
     isDead
   };
-      }
+}
