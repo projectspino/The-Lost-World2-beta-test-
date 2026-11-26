@@ -94,7 +94,19 @@ function saveAllGameData() {
   const statsSaved = playerStats.saveGame();
   const inventorySaved = inventory.saveInventory();
 
-  const success = statsSaved && inventorySaved;
+  const questsSaved = questSystem
+    ? questSystem.saveQuests()
+    : true;
+
+  const equipmentSaved = equipmentSystem
+    ? equipmentSystem.saveEquipment()
+    : true;
+
+  const success =
+    statsSaved &&
+    inventorySaved &&
+    questsSaved &&
+    equipmentSaved;
 
   console.log(
     success
@@ -588,11 +600,13 @@ function startGame() {
   player.material = playerMaterial;
   camera.lockedTarget = player;
 
-  // Buat statistik dan inventaris.
+  // =====================================
+  // PLAYER STATS & INVENTORY
+  // =====================================
+
   playerStats = createPlayerStats();
   inventory = createInventory();
 
-  // Muat data yang tersimpan.
   const statsLoaded = playerStats.loadGame();
   const inventoryLoaded = inventory.loadInventory();
 
@@ -608,23 +622,52 @@ function startGame() {
       : "Menggunakan inventaris awal."
   );
 
-  // Berikan item awal hanya jika belum ada data inventaris.
   if (!inventoryLoaded) {
     inventory.addItem("Health Potion", 2, "Consumable");
     inventory.addItem("Wood", 5, "Material");
     inventory.addItem("Goblin Token", 1, "Quest");
   }
 
-  // Quest.
+  // =====================================
+  // QUEST SYSTEM
+  // =====================================
+
   questSystem = createQuestSystem(playerStats, inventory);
 
-  // Toko.
+  const questsLoaded = questSystem.loadQuests();
+
+  console.log(
+    questsLoaded
+      ? "Quest berhasil dimuat."
+      : "Memulai quest baru."
+  );
+
+  // =====================================
+  // SHOP SYSTEM
+  // =====================================
+
   shopSystem = createShopSystem(playerStats, inventory);
   shopUI = createShopUI(shopSystem, playerStats, inventory);
 
-  // Equipment.
+  // =====================================
+  // EQUIPMENT SYSTEM
+  // =====================================
+
   equipmentSystem = createEquipmentSystem(inventory);
+
+  const equipmentLoaded = equipmentSystem.loadEquipment();
+
+  console.log(
+    equipmentLoaded
+      ? "Equipment berhasil dimuat."
+      : "Menggunakan equipment awal."
+  );
+
   equipmentUI = createEquipmentUI(equipmentSystem, inventory);
+
+  // =====================================
+  // INVENTORY QUEST PROGRESS
+  // =====================================
 
   inventory.setOnItemAdded((name, quantity) => {
     if (questSystem) {
@@ -632,7 +675,10 @@ function startGame() {
     }
   });
 
-  // Dunia, NPC, Wood, dan Dungeon.
+  // =====================================
+  // WORLD, NPC & DUNGEON
+  // =====================================
+
   disposeWorldInteraction = buildWorld(
     scene,
     (amount) => {
@@ -663,11 +709,17 @@ function startGame() {
     }
   );
 
-  // UI.
+  // =====================================
+  // USER INTERFACE
+  // =====================================
+
   disposeInventoryUI = createInventoryUI(inventory);
   disposeQuestUI = createQuestUI(questSystem);
 
-  // Kontrol pemain.
+  // =====================================
+  // PLAYER CONTROLLER
+  // =====================================
+
   const joystick = document.getElementById("joystick");
   const jumpButton = document.getElementById("jump-button");
 
@@ -679,7 +731,10 @@ function startGame() {
     jumpButton
   );
 
-  // Musuh.
+  // =====================================
+  // ENEMY AI
+  // =====================================
+
   enemyAI = createEnemyAI(
     scene,
     player,
@@ -706,7 +761,10 @@ function startGame() {
     }
   );
 
-  // Combat.
+  // =====================================
+  // COMBAT SYSTEM
+  // =====================================
+
   const attackButton = document.getElementById("attack-button");
 
   disposeCombatSystem = createCombatSystem(
@@ -720,14 +778,20 @@ function startGame() {
     equipmentSystem
   );
 
-  // Tombol equipment.
+  // =====================================
+  // EQUIPMENT BUTTON
+  // =====================================
+
   document.getElementById("equipment-button").onclick = () => {
     if (equipmentUI) {
       equipmentUI.open();
     }
   };
 
-  // Tombol simpan.
+  // =====================================
+  // SAVE BUTTON
+  // =====================================
+
   document.getElementById("save-game").onclick = () => {
     const saved = saveAllGameData();
 
@@ -738,7 +802,10 @@ function startGame() {
     }
   };
 
-  // Render game.
+  // =====================================
+  // RENDER LOOP
+  // =====================================
+
   engine.runRenderLoop(() => {
     if (scene) {
       scene.render();
@@ -747,97 +814,4 @@ function startGame() {
 
   window.addEventListener("resize", resizeEngine);
 
-  document.getElementById("exit-game").onclick = exitGame;
-}
-
-// =====================================
-// RESIZE
-// =====================================
-
-function resizeEngine() {
-  if (engine) {
-    engine.resize();
-  }
-}
-
-// =====================================
-// EXIT GAME
-// =====================================
-
-function exitGame() {
-  // Simpan sebelum sistem game dihentikan.
-  saveAllGameData();
-
-  if (disposePlayerController) {
-    disposePlayerController();
-    disposePlayerController = null;
-  }
-
-  if (disposeCombatSystem) {
-    disposeCombatSystem();
-    disposeCombatSystem = null;
-  }
-
-  if (enemyAI) {
-    enemyAI.dispose();
-    enemyAI = null;
-  }
-
-  if (disposeInventoryUI) {
-    disposeInventoryUI();
-    disposeInventoryUI = null;
-  }
-
-  if (disposeQuestUI) {
-    disposeQuestUI();
-    disposeQuestUI = null;
-  }
-
-  if (disposeWorldInteraction) {
-    disposeWorldInteraction();
-    disposeWorldInteraction = null;
-  }
-
-  if (shopUI) {
-    shopUI.dispose();
-    shopUI = null;
-  }
-
-  if (equipmentUI) {
-    equipmentUI.dispose();
-    equipmentUI = null;
-  }
-
-  shopSystem = null;
-  equipmentSystem = null;
-
-  window.removeEventListener("resize", resizeEngine);
-
-  const dialog = document.getElementById("npc-dialog");
-
-  if (dialog) {
-    dialog.remove();
-  }
-
-  if (engine) {
-    engine.stopRenderLoop();
-    engine.dispose();
-  }
-
-  engine = null;
-  scene = null;
-  camera = null;
-  player = null;
-  playerStats = null;
-  inventory = null;
-  questSystem = null;
-
-  showMainMenu();
-}
-
-// =====================================
-// INITIALIZE
-// =====================================
-
-showLoading();
-    
+  document.getElementById("exit-game"
