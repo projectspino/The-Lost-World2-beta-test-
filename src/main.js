@@ -83,7 +83,7 @@ const settings = {
 };
 
 // =====================================
-// SAVE & LOAD
+// SAVE ALL GAME DATA
 // =====================================
 
 function saveAllGameData() {
@@ -94,11 +94,18 @@ function saveAllGameData() {
   const statsSaved = playerStats.saveGame();
   const inventorySaved = inventory.saveInventory();
 
-  const success = statsSaved && inventorySaved;
+  const equipmentSaved = equipmentSystem
+    ? equipmentSystem.saveEquipment()
+    : true;
+
+  const success =
+    statsSaved &&
+    inventorySaved &&
+    equipmentSaved;
 
   console.log(
     success
-      ? "Game berhasil disimpan!"
+      ? "Semua progres game berhasil disimpan!"
       : "Gagal menyimpan sebagian progres game."
   );
 
@@ -592,7 +599,7 @@ function startGame() {
   playerStats = createPlayerStats();
   inventory = createInventory();
 
-  // Muat data yang tersimpan.
+  // Muat data statistik dan inventaris.
   const statsLoaded = playerStats.loadGame();
   const inventoryLoaded = inventory.loadInventory();
 
@@ -622,8 +629,17 @@ function startGame() {
   shopSystem = createShopSystem(playerStats, inventory);
   shopUI = createShopUI(shopSystem, playerStats, inventory);
 
-  // Equipment.
+  // Equipment dan pemuatan perlengkapan.
   equipmentSystem = createEquipmentSystem(inventory);
+
+  const equipmentLoaded = equipmentSystem.loadEquipment();
+
+  console.log(
+    equipmentLoaded
+      ? "Equipment berhasil dimuat."
+      : "Belum ada equipment tersimpan."
+  );
+
   equipmentUI = createEquipmentUI(equipmentSystem, inventory);
 
   inventory.setOnItemAdded((name, quantity) => {
@@ -820,24 +836,4 @@ function exitGame() {
   }
 
   if (engine) {
-    engine.stopRenderLoop();
-    engine.dispose();
-  }
-
-  engine = null;
-  scene = null;
-  camera = null;
-  player = null;
-  playerStats = null;
-  inventory = null;
-  questSystem = null;
-
-  showMainMenu();
-}
-
-// =====================================
-// INITIALIZE
-// =====================================
-
-showLoading();
-    
+    engine
