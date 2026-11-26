@@ -1,37 +1,30 @@
 
 const MONSTER_LOOT = {
   Goblin: {
-    xp: 25,
-    gold: [5, 15],
+    xp: 25, gold: [5, 15],
     drops: [
       { name: "Goblin Token", type: "Material", chance: 0.5 },
       { name: "Wood", type: "Material", chance: 0.5 },
       { name: "Health Potion", type: "Consumable", chance: 0.1 }
     ]
   },
-
   Skeleton: {
-    xp: 40,
-    gold: [10, 20],
+    xp: 40, gold: [10, 20],
     drops: [
       { name: "Bone", type: "Material", chance: 0.6 },
       { name: "Old Coin", type: "Quest", chance: 0.3 },
       { name: "Health Potion", type: "Consumable", chance: 0.15 }
     ]
   },
-
   "Dire Wolf": {
-    xp: 50,
-    gold: [10, 25],
+    xp: 50, gold: [10, 25],
     drops: [
       { name: "Wolf Pelt", type: "Material", chance: 0.8 },
       { name: "Wolf Fang", type: "Material", chance: 0.5 }
     ]
   },
-
   Orc: {
-    xp: 60,
-    gold: [15, 30],
+    xp: 60, gold: [15, 30],
     drops: [
       { name: "Orc Fang", type: "Material", chance: 0.5 },
       { name: "Orc Token", type: "Quest", chance: 0.7 },
@@ -39,135 +32,92 @@ const MONSTER_LOOT = {
       { name: "Health Potion", type: "Consumable", chance: 0.2 }
     ]
   },
-
   "Ancient Golem": {
-    xp: 300,
-    gold: [200, 300],
-    drops: [
-      { name: "Ancient Core", type: "Quest", chance: 1 }
-    ]
+    xp: 300, gold: [200, 300],
+    drops: [{ name: "Ancient Core", type: "Quest", chance: 1 }]
   }
 };
 
 export function createLootSystem(playerStats, inventory) {
-  if (
-    !playerStats ||
-    typeof playerStats.addXP !== "function" ||
-    typeof playerStats.addGold !== "function" ||
-    !inventory ||
-    typeof inventory.addItem !== "function"
-  ) {
+  if (!playerStats ||
+      typeof playerStats.addXP !== "function" ||
+      typeof playerStats.addGold !== "function" ||
+      !inventory ||
+      typeof inventory.addItem !== "function") {
     throw new Error("PlayerStats atau Inventory tidak valid.");
   }
 
-  const rewardedEnemies = new WeakSet();
+  const processed = new WeakSet();
 
-  function getMonsterLoot(monsterName) {
-    const data = MONSTER_LOOT[monsterName];
-
+  function getMonsterLoot(name) {
+    const data = MONSTER_LOOT[name];
     if (!data) return null;
 
     return {
       xp: data.xp,
       gold: [...data.gold],
-      drops: data.drops.map(drop => ({ ...drop }))
+      drops: data.drops.map(x => ({ ...x }))
     };
   }
 
   function rewardMonster(monster) {
     if (!monster || typeof monster !== "object") {
-      return {
-        success: false,
-        message: "Data monster tidak valid."
-      };
+      return { success: false, message: "Data monster tidak valid." };
     }
 
-    if (rewardedEnemies.has(monster)) {
-      return {
-        success: false,
-        message: "Hadiah monster ini sudah diberikan."
-      };
+    if (processed.has(monster)) {
+      return { success: false, message: "Hadiah sudah diproses." };
     }
 
-    const monsterName = monster.name;
-
-    if (
-      typeof monsterName !== "string" ||
-      !monsterName.trim()
-    ) {
-      return {
-        success: false,
-        message: "Nama monster tidak valid."
-      };
-    }
-
-    const loot = getMonsterLoot(monsterName);
-
+    const loot = getMonsterLoot(monster.name);
     if (!loot) {
-      return {
-        success: false,
-        message: "Monster tidak memiliki data loot."
-      };
+      return { success: false, message: "Data loot monster tidak ditemukan." };
     }
 
-    const gold =
-      Math.floor(
-        Math.random() * (loot.gold[1] - loot.gold[0] + 1)
-      ) + loot.gold[0];
+    const gold = Math.floor(
+      Math.random() * (loot.gold[1] - loot.gold[0] + 1)
+    ) + loot.gold[0];
 
-    const collectedItems = [];
-    const failedItems = [];
+    const result = {
+      success: false,
+      monster: monster.name,
+      xp: 0,
+      gold: 0,
+      items: [],
+      failedItems: [],
+      message: ""
+    };
+
+    // Mencegah pemanggilan ulang saat callback berjalan.
+    processed.add(monster);
 
     try {
       playerStats.addXP(loot.xp);
+      result.xp = loot.xp;
 
-      if (playerStats.addGold(gold) !== true) {
-        return {
-          success: false,
-          message: "Gold gagal ditambahkan."
-        };
-      }
+      playerStats.addGold(gold);
+      result.gold = gold;
 
       for (const drop of loot.drops) {
-        if (Math.random() <= drop.chance) {
-          const added = inventory.addItem(
-            drop.name,
-            1,
-            drop.type
-          );
+        if (Math.random() >= drop.chance) continue;
 
-          if (added) {
-            collectedItems.push(drop.name);
-          } else {
-            failedItems.push(drop.name);
-          }
-        }
+        const added = inventory.addItem(drop.name, 1, drop.type);
+        if (added === false) result.failedItems.push(drop.name);
+        else result.items.push(drop.name);
       }
 
-      rewardedEnemies.add(monster);
-
-      return {
-        success: true,
-        monster: monsterName,
-        xp: loot.xp,
-        gold,
-        items: collectedItems,
-        failedItems,
-        message: failedItems.length > 0
-          ? "XP dan Gold diterima, tetapi sebagian item tidak masuk karena inventaris penuh."
-          : "Hadiah monster berhasil diterima."
-      };
+      result.success = true;
+      result.message = result.failedItems.length
+        ? "XP dan Gold diberikan. Sebagian item tidak masuk karena inventaris penuh."
+        : "Hadiah monster berhasil diterima.";
     } catch (error) {
-      return {
-        success: false,
-        message: "Terjadi kesalahan saat memberikan hadiah monster.",
-        error
-      };
+      result.message = "Hadiah hanya berhasil diproses sebagian.";
+      result.error = error;
+      console.error("Monster reward error:", error);
     }
+
+    return result;
   }
 
-  return {
-    getMonsterLoot,
-    rewardMonster
-  };
-}
+  return { getMonsterLoot, rewardMonster };
+        }
