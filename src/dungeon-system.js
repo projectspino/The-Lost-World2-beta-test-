@@ -1,12 +1,24 @@
+
 export class DungeonSystem {
   constructor(options = {}) {
     this.dungeons = new Map();
-    this.onBossSpawn = options.onBossSpawn ?? null;
-    this.onDungeonComplete = options.onDungeonComplete ?? null;
+    this.onBossSpawn =
+      typeof options.onBossSpawn === "function"
+        ? options.onBossSpawn
+        : null;
+
+    this.onDungeonComplete =
+      typeof options.onDungeonComplete === "function"
+        ? options.onDungeonComplete
+        : null;
   }
 
   registerDungeon(id, config = {}) {
-    if (!id || this.dungeons.has(id)) {
+    if (
+      typeof id !== "string" ||
+      !id.trim() ||
+      this.dungeons.has(id)
+    ) {
       return false;
     }
 
@@ -56,15 +68,19 @@ export class DungeonSystem {
       return false;
     }
 
-    dungeon.bossSpawned = true;
-
-    if (typeof this.onBossSpawn === "function") {
-      this.onBossSpawn({
-        dungeonId: id,
-        bossName: dungeon.bossName
-      });
+    if (this.onBossSpawn) {
+      try {
+        this.onBossSpawn({
+          dungeonId: id,
+          bossName: dungeon.bossName
+        });
+      } catch (error) {
+        console.error("Gagal memunculkan boss:", error);
+        return false;
+      }
     }
 
+    dungeon.bossSpawned = true;
     return true;
   }
 
@@ -84,12 +100,16 @@ export class DungeonSystem {
     dungeon.completed = true;
     dungeon.status = "completed";
 
-    if (typeof this.onDungeonComplete === "function") {
-      this.onDungeonComplete({
-        dungeonId: id,
-        dungeonName: dungeon.name,
-        bossName: dungeon.bossName
-      });
+    if (this.onDungeonComplete) {
+      try {
+        this.onDungeonComplete({
+          dungeonId: id,
+          dungeonName: dungeon.name,
+          bossName: dungeon.bossName
+        });
+      } catch (error) {
+        console.error("Gagal menjalankan callback dungeon:", error);
+      }
     }
 
     return true;
@@ -97,7 +117,6 @@ export class DungeonSystem {
 
   getDungeon(id) {
     const dungeon = this.dungeons.get(id);
-
     return dungeon ? { ...dungeon } : null;
   }
 
@@ -123,4 +142,4 @@ export class DungeonSystem {
 
     return true;
   }
-  }
+}
