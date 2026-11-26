@@ -14,9 +14,12 @@ export function createPlayerController(
   let verticalSpeed = 0;
   let activePointer = null;
 
-  const walkSpeed = 5;
+  const walkSpeed = 7;
   const jumpPower = 7;
   const gravity = 18;
+
+  // Batas dunia 420 x 420
+  const worldLimit = 205;
 
   function updateJoystick(event) {
     const rect = joystick.getBoundingClientRect();
@@ -35,6 +38,14 @@ export function createPlayerController(
     );
   }
 
+  function stopJoystick(event) {
+    if (event.pointerId !== activePointer) return;
+
+    activePointer = null;
+    inputX = 0;
+    inputY = 0;
+  }
+
   joystick.addEventListener("pointerdown", event => {
     activePointer = event.pointerId;
     joystick.setPointerCapture(activePointer);
@@ -48,14 +59,6 @@ export function createPlayerController(
     updateJoystick(event);
     event.preventDefault();
   });
-
-  function stopJoystick(event) {
-    if (event.pointerId !== activePointer) return;
-
-    activePointer = null;
-    inputX = 0;
-    inputY = 0;
-  }
 
   joystick.addEventListener("pointerup", stopJoystick);
   joystick.addEventListener("pointercancel", stopJoystick);
@@ -96,6 +99,19 @@ export function createPlayerController(
         movement.scale(walkSpeed * delta)
       );
 
+      // Mencegah pemain keluar dari dunia
+      player.position.x = BABYLON.Scalar.Clamp(
+        player.position.x,
+        -worldLimit,
+        worldLimit
+      );
+
+      player.position.z = BABYLON.Scalar.Clamp(
+        player.position.z,
+        -worldLimit,
+        worldLimit
+      );
+
       player.rotation.y = Math.atan2(
         movement.x,
         movement.z
@@ -116,6 +132,7 @@ export function createPlayerController(
 
   return function disposeController() {
     scene.onBeforeRenderObservable.remove(observer);
+
     joystick.replaceWith(joystick.cloneNode(true));
     jumpButton.replaceWith(jumpButton.cloneNode(true));
   };
