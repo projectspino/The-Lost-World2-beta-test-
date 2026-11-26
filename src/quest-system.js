@@ -50,22 +50,20 @@ export function createQuestSystem(playerStats, inventory) {
     }
   ];
 
-  function getQuests() {
-    return quests.map(quest => ({
-      ...quest,
-      rewardItems: quest.rewardItems.map(item => ({ ...item }))
-    }));
-  }
-
-  function getQuest(id) {
-    const quest = quests.find(item => item.id === id);
-
-    if (!quest) return null;
-
+  function copyQuest(quest) {
     return {
       ...quest,
       rewardItems: quest.rewardItems.map(item => ({ ...item }))
     };
+  }
+
+  function getQuests() {
+    return quests.map(copyQuest);
+  }
+
+  function getQuest(id) {
+    const quest = quests.find(item => item.id === id);
+    return quest ? copyQuest(quest) : null;
   }
 
   function saveQuests() {
@@ -106,6 +104,10 @@ export function createQuestSystem(playerStats, inventory) {
       }
 
       data.quests.forEach(savedQuest => {
+        if (!savedQuest || typeof savedQuest.id !== "string") {
+          return;
+        }
+
         const quest = quests.find(
           item => item.id === savedQuest.id
         );
@@ -162,7 +164,15 @@ export function createQuestSystem(playerStats, inventory) {
   }
 
   function addProgress(target, amount = 1) {
-    if (amount <= 0) return;
+    const value = Number(amount);
+
+    if (
+      typeof target !== "string" ||
+      !Number.isFinite(value) ||
+      value <= 0
+    ) {
+      return;
+    }
 
     let changed = false;
 
@@ -175,7 +185,7 @@ export function createQuestSystem(playerStats, inventory) {
       ) {
         quest.progress = Math.min(
           quest.required,
-          quest.progress + amount
+          quest.progress + value
         );
 
         if (quest.progress >= quest.required) {
@@ -186,9 +196,7 @@ export function createQuestSystem(playerStats, inventory) {
       }
     });
 
-    if (changed) {
-      saveQuests();
-    }
+    if (changed) saveQuests();
   }
 
   function claimReward(id) {
@@ -196,20 +204,29 @@ export function createQuestSystem(playerStats, inventory) {
 
     if (
       !quest ||
+      !quest.accepted ||
       !quest.completed ||
       quest.claimed
     ) {
       return false;
     }
 
-    if (playerStats) {
-      playerStats.addXP(quest.rewardXP);
+    if (inventory) {
+      for (const item of quest.rewardItems) {
+        const added = inventory.addItem(
+          item.name,
+          item.amount,
+          "Consumable"
+        );
+
+        if (!added) {
+          return false;
+        }
+      }
     }
 
-    if (inventory) {
-      quest.rewardItems.forEach(item => {
-        inventory.addItem(item.name, item.amount);
-      });
+    if (playerStats) {
+      playerStats.addXP(quest.rewardXP);
     }
 
     quest.claimed = true;
