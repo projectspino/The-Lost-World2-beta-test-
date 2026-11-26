@@ -1,3 +1,4 @@
+
 const RECIPES = [
   {
     id: "wooden_sword",
@@ -75,16 +76,39 @@ export function createCraftingSystem(inventory) {
   function craft(id) {
     const recipe = RECIPES.find(item => item.id === id);
 
-    if (!recipe || !canCraft(id)) {
+    if (!recipe) {
       return {
         success: false,
-        message: "Bahan crafting tidak mencukupi."
+        message: "Resep tidak ditemukan."
       };
+    }
+
+    const items = inventory.getItems();
+
+    const materialsToRemove = [];
+
+    for (const material of recipe.materials) {
+      const found = items.find(
+        item => item.name === material.name
+      );
+
+      if (!found || found.quantity < material.amount) {
+        return {
+          success: false,
+          message: "Bahan crafting tidak mencukupi."
+        };
+      }
+
+      materialsToRemove.push({
+        name: material.name,
+        amount: material.amount,
+        type: found.type
+      });
     }
 
     const removedMaterials = [];
 
-    for (const material of recipe.materials) {
+    for (const material of materialsToRemove) {
       const removed = inventory.removeItem(
         material.name,
         material.amount
@@ -105,15 +129,7 @@ export function createCraftingSystem(inventory) {
         };
       }
 
-      const original = inventory.getItems().find(
-        item => item.name === material.name
-      );
-
-      removedMaterials.push({
-        name: material.name,
-        amount: material.amount,
-        type: original?.type ?? "Material"
-      });
+      removedMaterials.push(material);
     }
 
     const added = inventory.addItem(
@@ -150,4 +166,5 @@ export function createCraftingSystem(inventory) {
     canCraft,
     craft
   };
-      }
+}
+  
