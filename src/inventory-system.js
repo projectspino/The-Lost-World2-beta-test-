@@ -31,7 +31,14 @@ export function createInventory() {
     if (existingItem) {
       existingItem.quantity += quantity;
 
-      if (onItemAdded) onItemAdded(name, quantity);
+      if (onItemAdded) {
+        try {
+          onItemAdded(name, quantity);
+        } catch (error) {
+          console.error("Inventory callback error:", error);
+        }
+      }
+
       return true;
     }
 
@@ -46,11 +53,17 @@ export function createInventory() {
       type
     });
 
-    if (onItemAdded) onItemAdded(name, quantity);
+    if (onItemAdded) {
+      try {
+        onItemAdded(name, quantity);
+      } catch (error) {
+        console.error("Inventory callback error:", error);
+      }
+    }
+
     return true;
   }
 
-  // type bersifat opsional agar pemanggilan lama tetap kompatibel.
   function removeItem(name, quantity = 1, type = null) {
     if (
       typeof name !== "string" ||
@@ -120,6 +133,7 @@ export function createInventory() {
   function loadInventory() {
     try {
       const savedText = localStorage.getItem(INVENTORY_SAVE_KEY);
+
       if (!savedText) return false;
 
       const savedData = JSON.parse(savedText);
