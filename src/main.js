@@ -43,36 +43,12 @@ let equipmentUI = null;
 let selectedCharacter = "Ksatria";
 
 const characters = [
-  {
-    name: "Ksatria",
-    icon: "⚔️",
-    description: "Petarung tangguh dengan pedang dan perisai."
-  },
-  {
-    name: "Pemanah",
-    icon: "🏹",
-    description: "Ahli serangan jarak jauh."
-  },
-  {
-    name: "Penyihir",
-    icon: "🔮",
-    description: "Pengguna kekuatan sihir."
-  },
-  {
-    name: "Assassin",
-    icon: "🗡️",
-    description: "Petarung cepat dan lincah."
-  },
-  {
-    name: "Paladin",
-    icon: "🛡️",
-    description: "Pelindung dengan kekuatan suci."
-  },
-  {
-    name: "Druid",
-    icon: "🌿",
-    description: "Pengendali kekuatan alam."
-  }
+  { name: "Ksatria", icon: "⚔️", description: "Petarung tangguh dengan pedang dan perisai." },
+  { name: "Pemanah", icon: "🏹", description: "Ahli serangan jarak jauh." },
+  { name: "Penyihir", icon: "🔮", description: "Pengguna kekuatan sihir." },
+  { name: "Assassin", icon: "🗡️", description: "Petarung cepat dan lincah." },
+  { name: "Paladin", icon: "🛡️", description: "Pelindung dengan kekuatan suci." },
+  { name: "Druid", icon: "🌿", description: "Pengendali kekuatan alam." }
 ];
 
 const settings = {
@@ -87,17 +63,11 @@ const settings = {
 // =====================================
 
 function saveAllGameData() {
-  if (!playerStats || !inventory) {
-    return false;
-  }
+  if (!playerStats || !inventory) return false;
 
   const statsSaved = playerStats.saveGame();
   const inventorySaved = inventory.saveInventory();
-
-  const questsSaved = questSystem
-    ? questSystem.saveQuests()
-    : true;
-
+  const questsSaved = questSystem ? questSystem.saveQuests() : true;
   const equipmentSaved = equipmentSystem
     ? equipmentSystem.saveEquipment()
     : true;
@@ -127,11 +97,9 @@ function showLoading() {
       <div class="logo">⚔</div>
       <h1>THE LOST WORLD</h1>
       <p class="subtitle">AN EPIC FANTASY ADVENTURE</p>
-
       <div class="loading-track">
         <div class="loading-progress"></div>
       </div>
-
       <p>Preparing your adventure...</p>
     </div>
   `;
@@ -150,27 +118,17 @@ function showMainMenu() {
         <div class="logo">⚔</div>
         <h1>THE LOST WORLD</h1>
         <p class="subtitle">2.0 • BETA ADVENTURE</p>
-
         <div class="menu">
-          <button class="game-button" id="play-button">
-            NEW ADVENTURE
-          </button>
-
-          <button class="game-button secondary" id="settings-button">
-            SETTINGS
-          </button>
-
+          <button class="game-button" id="play-button">NEW ADVENTURE</button>
+          <button class="game-button secondary" id="settings-button">SETTINGS</button>
           <p class="version">Fantasy Open World RPG</p>
         </div>
       </div>
     </div>
   `;
 
-  document.getElementById("play-button").onclick =
-    showCharacterSelect;
-
-  document.getElementById("settings-button").onclick =
-    showSettings;
+  document.getElementById("play-button").onclick = showCharacterSelect;
+  document.getElementById("settings-button").onclick = showSettings;
 }
 
 // =====================================
@@ -180,9 +138,7 @@ function showMainMenu() {
 function showCharacterSelect() {
   const cards = characters.map(character => `
     <button
-      class="character ${
-        character.name === selectedCharacter ? "selected" : ""
-      }"
+      class="character ${character.name === selectedCharacter ? "selected" : ""}"
       data-character="${character.name}"
     >
       <span class="character-icon">${character.icon}</span>
@@ -196,16 +152,9 @@ function showCharacterSelect() {
       <div class="panel">
         <h1>CHOOSE YOUR HERO</h1>
         <p class="subtitle">Select your adventure class</p>
-
         <div class="character-list">${cards}</div>
-
-        <button class="game-button" id="start-button">
-          START ADVENTURE
-        </button>
-
-        <button class="game-button secondary" id="back-button">
-          BACK
-        </button>
+        <button class="game-button" id="start-button">START ADVENTURE</button>
+        <button class="game-button secondary" id="back-button">BACK</button>
       </div>
     </div>
   `;
@@ -248,20 +197,12 @@ function showSettings() {
 
         <div class="setting-row">
           <label for="shadows">Shadows</label>
-          <input
-            type="checkbox"
-            id="shadows"
-            ${settings.shadows ? "checked" : ""}
-          >
+          <input type="checkbox" id="shadows" ${settings.shadows ? "checked" : ""}>
         </div>
 
         <div class="setting-row">
           <label for="particles">Particle Effects</label>
-          <input
-            type="checkbox"
-            id="particles"
-            ${settings.particles ? "checked" : ""}
-          >
+          <input type="checkbox" id="particles" ${settings.particles ? "checked" : ""}>
         </div>
 
         <div class="setting-row">
@@ -273,13 +214,8 @@ function showSettings() {
           </select>
         </div>
 
-        <button class="game-button" id="save-settings">
-          SAVE SETTINGS
-        </button>
-
-        <button class="game-button secondary" id="back-button">
-          BACK
-        </button>
+        <button class="game-button" id="save-settings">SAVE SETTINGS</button>
+        <button class="game-button secondary" id="back-button">BACK</button>
       </div>
     </div>
   `;
@@ -302,7 +238,7 @@ function showSettings() {
 }
 
 // =====================================
-// GAME HUD STYLES
+// HUD STYLES
 // =====================================
 
 function addGameHudStyles() {
@@ -340,13 +276,8 @@ function addGameHudStyles() {
       transition: width 0.2s ease;
     }
 
-    .hp-fill {
-      background: #d83b3b;
-    }
-
-    .xp-fill {
-      background: #36b85a;
-    }
+    .hp-fill { background: #d83b3b; }
+    .xp-fill { background: #36b85a; }
 
     .action-buttons {
       display: flex;
@@ -392,10 +323,7 @@ function addGameHudStyles() {
       color: #e7c77e;
     }
 
-    .npc-dialog p {
-      line-height: 1.5;
-    }
-
+    .npc-dialog p { line-height: 1.5; }
     .npc-dialog button {
       margin: 5px;
       padding: 10px 16px;
@@ -814,4 +742,96 @@ function startGame() {
 
   window.addEventListener("resize", resizeEngine);
 
-  document.getElementById("exit-game"
+  document.getElementById("exit-game").onclick = exitGame;
+}
+
+// =====================================
+// RESIZE
+// =====================================
+
+function resizeEngine() {
+  if (engine) {
+    engine.resize();
+  }
+}
+
+// =====================================
+// EXIT GAME
+// =====================================
+
+function exitGame() {
+  saveAllGameData();
+
+  if (disposePlayerController) {
+    disposePlayerController();
+    disposePlayerController = null;
+  }
+
+  if (disposeCombatSystem) {
+    disposeCombatSystem();
+    disposeCombatSystem = null;
+  }
+
+  if (enemyAI) {
+    enemyAI.dispose();
+    enemyAI = null;
+  }
+
+  if (disposeInventoryUI) {
+    disposeInventoryUI();
+    disposeInventoryUI = null;
+  }
+
+  if (disposeQuestUI) {
+    disposeQuestUI();
+    disposeQuestUI = null;
+  }
+
+  if (disposeWorldInteraction) {
+    disposeWorldInteraction();
+    disposeWorldInteraction = null;
+  }
+
+  if (shopUI) {
+    shopUI.dispose();
+    shopUI = null;
+  }
+
+  if (equipmentUI) {
+    equipmentUI.dispose();
+    equipmentUI = null;
+  }
+
+  shopSystem = null;
+  equipmentSystem = null;
+
+  window.removeEventListener("resize", resizeEngine);
+
+  const dialog = document.getElementById("npc-dialog");
+
+  if (dialog) {
+    dialog.remove();
+  }
+
+  if (engine) {
+    engine.stopRenderLoop();
+    engine.dispose();
+  }
+
+  engine = null;
+  scene = null;
+  camera = null;
+  player = null;
+  playerStats = null;
+  inventory = null;
+  questSystem = null;
+
+  showMainMenu();
+}
+
+// =====================================
+// INITIALIZE
+// =====================================
+
+showLoading();
+    
