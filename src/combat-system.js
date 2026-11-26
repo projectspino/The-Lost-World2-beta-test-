@@ -9,7 +9,8 @@ export function createCombatSystem(
   inventory,
   enemyAI = null,
   questSystem = null,
-  equipmentSystem = null
+  equipmentSystem = null,
+  lootSystem = null
 ) {
   const goblins = [];
   let disposed = false;
@@ -74,11 +75,11 @@ export function createCombatSystem(
       mesh: goblin,
       hp: 100,
       maxHp: 100,
-      alive: true
+      alive: true,
+      rewarded: false
     });
   }
 
-  // Boss HP Bar
   const bossBar = document.createElement("div");
 
   bossBar.style.cssText = `
@@ -150,7 +151,12 @@ export function createCombatSystem(
       enemy => enemy.name === "Ancient Golem"
     );
 
-    if (!boss || !boss.alive || !boss.mesh || boss.mesh.isDisposed()) {
+    if (
+      !boss ||
+      !boss.alive ||
+      !boss.mesh ||
+      boss.mesh.isDisposed()
+    ) {
       bossBar.style.display = "none";
       return;
     }
@@ -189,7 +195,7 @@ export function createCombatSystem(
     return baseDamage + Math.max(0, bonuses.attack || 0);
   }
 
-  function giveLoot(enemyName) {
+  function giveLegacyLoot(enemyName) {
     if (!inventory) return;
 
     const lootTables = {
@@ -225,30 +231,44 @@ export function createCombatSystem(
     }
   }
 
-  function defeatEnemy(enemy) {
-    if (!enemy.alive) return;
+  function giveEnemyReward(enemy) {
+    if (enemy.rewarded) return;
 
-    enemy.alive = false;
+    enemy.rewarded = true;
 
-    if (enemy.mesh && !enemy.mesh.isDisposed()) {
-      enemy.mesh.dispose();
+    if (lootSystem && typeof lootSystem.rewardMonster === "function") {
+      const result = lootSystem.rewardMonster(enemy);
+
+      if (result.success) return;
     }
 
     if (playerStats) {
       playerStats.addXP(xpRewards[enemy.name] || 25);
 
-      const reward = goldRewards[enemy.name] || 0;
+      const gold = goldRewards[enemy.name] || 0;
 
-      if (reward > 0 && playerStats.addGold) {
-        playerStats.addGold(reward);
+      if (gold > 0 && playerStats.addGold) {
+        playerStats.addGold(gold);
       }
+    }
+
+    giveLegacyLoot(enemy.name);
+  }
+
+  function defeatEnemy(enemy) {
+    if (!enemy || !enemy.alive) return;
+
+    enemy.alive = false;
+
+    giveEnemyReward(enemy);
+
+    if (enemy.mesh && !enemy.mesh.isDisposed()) {
+      enemy.mesh.dispose();
     }
 
     if (questSystem) {
       questSystem.addProgress(enemy.name, 1);
     }
-
-    giveLoot(enemy.name);
 
     updateBossBar();
   }
@@ -272,9 +292,7 @@ export function createCombatSystem(
     }
 
     if (enemyAI) {
-      const otherEnemies = enemyAI.getEnemies();
-
-      for (const enemy of otherEnemies) {
+      for (const enemy of enemyAI.getEnemies()) {
         if (
           enemy.alive &&
           enemy.mesh &&
@@ -320,7 +338,6 @@ export function createCombatSystem(
 
     if (nearestTarget.source === "goblin") {
       enemy.hp -= damage;
-
       enemy.mesh.scaling.set(1.15, 0.9, 1.15);
 
       setTimeout(() => {
@@ -339,7 +356,6 @@ export function createCombatSystem(
       }
     } else {
       enemy.health -= damage;
-
       enemy.mesh.scaling.set(1.15, 0.9, 1.15);
 
       setTimeout(() => {
@@ -387,5 +403,5 @@ export function createCombatSystem(
 
     goblins.length = 0;
   };
-  }
-          
+}
+  
