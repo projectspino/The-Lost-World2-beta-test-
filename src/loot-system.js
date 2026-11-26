@@ -36,9 +36,7 @@ export function createLootSystem(playerStats, inventory) {
     !inventory ||
     typeof inventory.addItem !== "function"
   ) {
-    throw new Error(
-      "PlayerStats atau Inventory tidak valid."
-    );
+    throw new Error("PlayerStats atau Inventory tidak valid.");
   }
 
   const rewardedEnemies = new WeakSet();
@@ -56,10 +54,7 @@ export function createLootSystem(playerStats, inventory) {
   }
 
   function rewardMonster(monster) {
-    if (
-      !monster ||
-      typeof monster !== "object"
-    ) {
+    if (!monster || typeof monster !== "object") {
       return {
         success: false,
         message: "Data monster tidak valid."
@@ -76,8 +71,8 @@ export function createLootSystem(playerStats, inventory) {
     const monsterName = monster.name;
 
     if (
-      !monsterName ||
-      typeof monsterName !== "string"
+      typeof monsterName !== "string" ||
+      !monsterName.trim()
     ) {
       return {
         success: false,
@@ -94,43 +89,66 @@ export function createLootSystem(playerStats, inventory) {
       };
     }
 
-    rewardedEnemies.add(monster);
-
-    const gold = Math.floor(
-      Math.random() *
-      (loot.gold[1] - loot.gold[0] + 1)
-    ) + loot.gold[0];
-
-    playerStats.addXP(loot.xp);
-    playerStats.addGold(gold);
+    const gold =
+      Math.floor(
+        Math.random() * (loot.gold[1] - loot.gold[0] + 1)
+      ) + loot.gold[0];
 
     const collectedItems = [];
+    const failedItems = [];
 
-    for (const drop of loot.drops) {
-      if (Math.random() <= drop.chance) {
-        const added = inventory.addItem(
-          drop.name,
-          1,
-          drop.type
-        );
+    try {
+      playerStats.addXP(loot.xp);
 
-        if (added) {
-          collectedItems.push(drop.name);
+      const goldAdded = playerStats.addGold(gold);
+
+      if (goldAdded !== true) {
+        return {
+          success: false,
+          message: "Gold gagal ditambahkan. Hadiah belum diselesaikan."
+        };
+      }
+
+      for (const drop of loot.drops) {
+        if (Math.random() <= drop.chance) {
+          const added = inventory.addItem(
+            drop.name,
+            1,
+            drop.type
+          );
+
+          if (added) {
+            collectedItems.push(drop.name);
+          } else {
+            failedItems.push(drop.name);
+          }
         }
       }
-    }
 
-    return {
-      success: true,
-      monster: monsterName,
-      xp: loot.xp,
-      gold,
-      items: collectedItems
-    };
+      rewardedEnemies.add(monster);
+
+      return {
+        success: true,
+        monster: monsterName,
+        xp: loot.xp,
+        gold,
+        items: collectedItems,
+        failedItems,
+        message: failedItems.length > 0
+          ? "XP dan Gold diterima, tetapi sebagian item tidak masuk karena inventaris penuh."
+          : "Hadiah monster berhasil diterima."
+      };
+    } catch (error) {
+      return {
+        success: false,
+        message: "Terjadi kesalahan saat memberikan hadiah monster.",
+        error
+      };
+    }
   }
 
   return {
     getMonsterLoot,
     rewardMonster
   };
-}
+        }
