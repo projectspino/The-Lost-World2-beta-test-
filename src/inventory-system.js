@@ -1,16 +1,24 @@
 
 const MAX_INVENTORY_SLOTS = 20;
+const INVENTORY_SAVE_KEY = "the-lost-world-inventory";
 
 export function createInventory() {
   const items = [];
   let onItemAdded = null;
 
   function setOnItemAdded(callback) {
-    onItemAdded = typeof callback === "function" ? callback : null;
+    onItemAdded =
+      typeof callback === "function" ? callback : null;
   }
 
   function addItem(name, quantity = 1, type = "Material") {
-    if (!name || quantity <= 0) {
+    if (
+      typeof name !== "string" ||
+      !name.trim() ||
+      !Number.isFinite(quantity) ||
+      quantity <= 0 ||
+      !Number.isInteger(quantity)
+    ) {
       return false;
     }
 
@@ -47,11 +55,19 @@ export function createInventory() {
   }
 
   function removeItem(name, quantity = 1) {
+    if (
+      !Number.isFinite(quantity) ||
+      quantity <= 0 ||
+      !Number.isInteger(quantity)
+    ) {
+      return false;
+    }
+
     const index = items.findIndex(
       item => item.name === name
     );
 
-    if (index === -1 || quantity <= 0) {
+    if (index === -1 || items[index].quantity < quantity) {
       return false;
     }
 
@@ -80,6 +96,89 @@ export function createInventory() {
     items.length = 0;
   }
 
+  function saveInventory() {
+    try {
+      const saveData = {
+        version: 1,
+        items: getItems()
+      };
+
+      localStorage.setItem(
+        INVENTORY_SAVE_KEY,
+        JSON.stringify(saveData)
+      );
+
+      return true;
+    } catch (error) {
+      console.error("Gagal menyimpan inventaris:", error);
+      return false;
+    }
+  }
+
+  function loadInventory() {
+    try {
+      const savedText = localStorage.getItem(
+        INVENTORY_SAVE_KEY
+      );
+
+      if (!savedText) return false;
+
+      const savedData = JSON.parse(savedText);
+
+      if (
+        !savedData ||
+        savedData.version !== 1 ||
+        !Array.isArray(savedData.items) ||
+        savedData.items.length > MAX_INVENTORY_SLOTS
+      ) {
+        return false;
+      }
+
+      const validItems = [];
+
+      for (const item of savedData.items) {
+        if (
+          !item ||
+          typeof item.name !== "string" ||
+          !item.name.trim() ||
+          typeof item.type !== "string" ||
+          !Number.isFinite(item.quantity) ||
+          !Number.isInteger(item.quantity) ||
+          item.quantity <= 0
+        ) {
+          return false;
+        }
+
+        validItems.push({
+          id: Number.isFinite(item.id)
+            ? item.id
+            : Date.now() + Math.random(),
+          name: item.name,
+          quantity: item.quantity,
+          type: item.type
+        });
+      }
+
+      items.length = 0;
+      items.push(...validItems);
+
+      return true;
+    } catch (error) {
+      console.error("Gagal memuat inventaris:", error);
+      return false;
+    }
+  }
+
+  function deleteInventorySave() {
+    try {
+      localStorage.removeItem(INVENTORY_SAVE_KEY);
+      return true;
+    } catch (error) {
+      console.error("Gagal menghapus save inventaris:", error);
+      return false;
+    }
+  }
+
   return {
     addItem,
     removeItem,
@@ -87,6 +186,9 @@ export function createInventory() {
     getItemCount,
     hasItem,
     clearInventory,
-    setOnItemAdded
+    setOnItemAdded,
+    saveInventory,
+    loadInventory,
+    deleteInventorySave
   };
 }
