@@ -474,7 +474,20 @@ function startGame() {
   `;
 
   const canvas = document.getElementById("game-canvas");
+const debugBox = document.createElement("pre");
+debugBox.style.cssText =
+  "position:fixed;z-index:99999;top:80px;left:10px;right:10px;padding:10px;background:#300;color:white;font:12px monospace;white-space:pre-wrap;";
+debugBox.textContent =
+  "WebGL: " + (BABYLON.Engine.isSupported() ? "DIDUKUNG" : "TIDAK DIDUKUNG");
+document.getElementById("game-container").appendChild(debugBox);
 
+window.addEventListener("error", (e) => {
+  debugBox.textContent += "\nERROR: " + e.message;
+});
+
+window.addEventListener("unhandledrejection", (e) => {
+  debugBox.textContent += "\nPROMISE: " + (e.reason?.message || e.reason);
+});
   engine = new BABYLON.Engine(canvas, true, {
     preserveDrawingBuffer: false,
     stencil: false,
