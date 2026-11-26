@@ -1,3 +1,4 @@
+JavaScript
 
 import * as BABYLON from "@babylonjs/core";
 import "./styles/menu.css";
@@ -83,6 +84,17 @@ const settings = {
 };
 
 // =====================================
+// CHECK SAVED GAME
+// =====================================
+
+function hasSavedGame() {
+  return (
+    localStorage.getItem("the-lost-world-player-stats") !== null ||
+    localStorage.getItem("the-lost-world-inventory") !== null
+  );
+}
+
+// =====================================
 // SAVE ALL GAME DATA
 // =====================================
 
@@ -94,14 +106,51 @@ function saveAllGameData() {
   const statsSaved = playerStats.saveGame();
   const inventorySaved = inventory.saveInventory();
 
+  const questsSaved = questSystem
+    ? questSystem.saveQuests()
+    : true;
+
   const equipmentSaved = equipmentSystem
     ? equipmentSystem.saveEquipment()
     : true;
 
+  let positionSaved = true;
+
+  if (player) {
+    try {
+      localStorage.setItem(
+        "the-lost-world-player-position",
+        JSON.stringify({
+          x: player.position.x,
+          y: player.position.y,
+          z: player.position.z
+        })
+      );
+    } catch (error) {
+      console.warn("Gagal menyimpan posisi pemain.", error);
+      positionSaved = false;
+    }
+  }
+
+  let characterSaved = true;
+
+  try {
+    localStorage.setItem(
+      "the-lost-world-character",
+      selectedCharacter
+    );
+  } catch (error) {
+    console.warn("Gagal menyimpan karakter.", error);
+    characterSaved = false;
+  }
+
   const success =
     statsSaved &&
     inventorySaved &&
-    equipmentSaved;
+    questsSaved &&
+    equipmentSaved &&
+    positionSaved &&
+    characterSaved;
 
   console.log(
     success
@@ -110,6 +159,27 @@ function saveAllGameData() {
   );
 
   return success;
+}
+
+// =====================================
+// DELETE ALL SAVED GAME DATA
+// =====================================
+
+function deleteAllGameData() {
+  const saveKeys = [
+    "the-lost-world-player-stats",
+    "the-lost-world-inventory",
+    "the-lost-world-quests",
+    "the-lost-world-equipment",
+    "the-lost-world-player-position",
+    "the-lost-world-character"
+  ];
+
+  saveKeys.forEach(key => {
+    localStorage.removeItem(key);
+  });
+
+  console.log("Semua progres lama telah dihapus.");
 }
 
 // =====================================
@@ -139,6 +209,8 @@ function showLoading() {
 // =====================================
 
 function showMainMenu() {
+  const savedGameExists = hasSavedGame();
+
   app.innerHTML = `
     <div class="screen main-screen">
       <div class="menu-content">
@@ -147,8 +219,18 @@ function showMainMenu() {
         <p class="subtitle">2.0 • BETA ADVENTURE</p>
 
         <div class="menu">
+          ${
+            savedGameExists
+              ? `
+                <button class="game-button" id="continue-button">
+                  CONTINUE GAME
+                </button>
+              `
+              : ""
+          }
+
           <button class="game-button" id="play-button">
-            NEW ADVENTURE
+            NEW GAME
           </button>
 
           <button class="game-button secondary" id="settings-button">
@@ -161,8 +243,29 @@ function showMainMenu() {
     </div>
   `;
 
-  document.getElementById("play-button").onclick =
-    showCharacterSelect;
+  const continueButton =
+    document.getElementById("continue-button");
+
+  if (continueButton) {
+    continueButton.onclick = () => {
+      startGame();
+    };
+  }
+
+  document.getElementById("play-button").onclick = () => {
+    if (hasSavedGame()) {
+      const confirmed = confirm(
+        "Mulai game baru? Semua progres tersimpan akan dihapus."
+      );
+
+      if (!confirmed) return;
+
+      deleteAllGameData();
+    }
+
+    selectedCharacter = "Ksatria";
+    showCharacterSelect();
+  };
 
   document.getElementById("settings-button").onclick =
     showSettings;
@@ -217,8 +320,12 @@ function showCharacterSelect() {
     };
   });
 
-  document.getElementById("start-button").onclick = startGame;
-  document.getElementById("back-button").onclick = showMainMenu;
+  document.getElementById("start-button").onclick = () => {
+    startGame();
+  };
+
+  document.getElementById("back-button").onclick =
+    showMainMenu;
 }
 
 // =====================================
@@ -293,7 +400,8 @@ function showSettings() {
     showSettings();
   };
 
-  document.getElementById("back-button").onclick = showMainMenu;
+  document.getElementById("back-button").onclick =
+    showMainMenu;
 }
 
 // =====================================
@@ -496,6 +604,24 @@ function showNpcDialog(name, dialogue) {
 // =====================================
 
 function startGame() {
+  // Saat Continue, gunakan karakter yang tersimpan.
+  const savedCharacter = localStorage.getItem(
+    "the-lost-world-character"
+  );
+
+  if (
+    savedCharacter &&
+    characters.some(character => character.name === savedCharacter)
+  ) {
+    selectedCharacter = savedCharacter;
+  }
+
+  // Simpan karakter yang digunakan.
+  localStorage.setItem(
+    "the-lost-world-character",
+    selectedCharacter
+  );
+
   addGameHudStyles();
 
   app.innerHTML = `
@@ -581,6 +707,28 @@ function startGame() {
 
   player.position.y = 1;
 
+  // Muat posisi pemain yang tersimpan.
+  try {
+    const savedPosition = JSON.parse(
+      localStorage.getItem("the-lost-world-player-position")
+    );
+
+    if (
+      savedPosition &&
+      Number.isFinite(savedPosition.x) &&
+      Number.isFinite(savedPosition.y) &&
+      Number.isFinite(savedPosition.z)
+    ) {
+      player.position.set(
+        savedPosition.x,
+        savedPosition.y,
+        savedPosition.z
+      );
+    }
+  } catch (error) {
+    console.warn("Data posisi pemain tidak dapat dimuat.", error);
+  }
+
   const playerMaterial = new BABYLON.StandardMaterial(
     "player-material",
     scene
@@ -595,11 +743,10 @@ function startGame() {
   player.material = playerMaterial;
   camera.lockedTarget = player;
 
-  // Buat statistik dan inventaris.
+  // Statistik dan inventaris.
   playerStats = createPlayerStats();
   inventory = createInventory();
 
-  // Muat data statistik dan inventaris.
   const statsLoaded = playerStats.loadGame();
   const inventoryLoaded = inventory.loadInventory();
 
@@ -615,7 +762,7 @@ function startGame() {
       : "Menggunakan inventaris awal."
   );
 
-  // Berikan item awal hanya jika belum ada data inventaris.
+  // Item awal hanya diberikan jika belum ada save inventaris.
   if (!inventoryLoaded) {
     inventory.addItem("Health Potion", 2, "Consumable");
     inventory.addItem("Wood", 5, "Material");
@@ -625,11 +772,19 @@ function startGame() {
   // Quest.
   questSystem = createQuestSystem(playerStats, inventory);
 
-  // Toko.
+  const questsLoaded = questSystem.loadQuests();
+
+  console.log(
+    questsLoaded
+      ? "Progres Quest berhasil dimuat."
+      : "Memulai Quest baru."
+  );
+
+  // Shop.
   shopSystem = createShopSystem(playerStats, inventory);
   shopUI = createShopUI(shopSystem, playerStats, inventory);
 
-  // Equipment dan pemuatan perlengkapan.
+  // Equipment.
   equipmentSystem = createEquipmentSystem(inventory);
 
   const equipmentLoaded = equipmentSystem.loadEquipment();
@@ -642,13 +797,14 @@ function startGame() {
 
   equipmentUI = createEquipmentUI(equipmentSystem, inventory);
 
+  // Pantau item yang ditambahkan untuk progres Quest.
   inventory.setOnItemAdded((name, quantity) => {
     if (questSystem) {
       questSystem.addProgress(name, quantity);
     }
   });
 
-  // Dunia, NPC, Wood, dan Dungeon.
+  // Bangun dunia.
   disposeWorldInteraction = buildWorld(
     scene,
     (amount) => {
@@ -663,177 +819,4 @@ function startGame() {
       if (added) {
         console.log("Mendapatkan " + amount + " Wood!");
       } else {
-        console.log("Inventori penuh!");
-      }
-    },
-    showNpcDialog,
-    () => {
-      if (!player) return;
-
-      player.position.set(65, 1, 27);
-
-      showNpcDialog(
-        "Dungeon Kuno",
-        "Kamu telah memasuki Dungeon Kuno. Jelajahi tempat ini dan bersiaplah menghadapi tantangan!"
-      );
-    }
-  );
-
-  // UI.
-  disposeInventoryUI = createInventoryUI(inventory);
-  disposeQuestUI = createQuestUI(questSystem);
-
-  // Kontrol pemain.
-  const joystick = document.getElementById("joystick");
-  const jumpButton = document.getElementById("jump-button");
-
-  disposePlayerController = createPlayerController(
-    scene,
-    camera,
-    player,
-    joystick,
-    jumpButton
-  );
-
-  // Musuh.
-  enemyAI = createEnemyAI(
-    scene,
-    player,
-    (damage, enemyName) => {
-      if (playerStats) {
-        const bonuses = equipmentSystem
-          ? equipmentSystem.getBonuses()
-          : { defense: 0 };
-
-        const defense = Math.max(
-          0,
-          bonuses.defense || 0
-        );
-
-        const reducedDamage = Math.max(
-          1,
-          damage - defense
-        );
-
-        playerStats.takeDamage(reducedDamage);
-      }
-
-      console.log(enemyName + " menyerang pemain!");
-    }
-  );
-
-  // Combat.
-  const attackButton = document.getElementById("attack-button");
-
-  disposeCombatSystem = createCombatSystem(
-    scene,
-    player,
-    attackButton,
-    playerStats,
-    inventory,
-    enemyAI,
-    questSystem,
-    equipmentSystem
-  );
-
-  // Tombol equipment.
-  document.getElementById("equipment-button").onclick = () => {
-    if (equipmentUI) {
-      equipmentUI.open();
-    }
-  };
-
-  // Tombol simpan.
-  document.getElementById("save-game").onclick = () => {
-    const saved = saveAllGameData();
-
-    if (saved) {
-      alert("Progres game berhasil disimpan!");
-    } else {
-      alert("Progres game gagal disimpan.");
-    }
-  };
-
-  // Render game.
-  engine.runRenderLoop(() => {
-    if (scene) {
-      scene.render();
-    }
-  });
-
-  window.addEventListener("resize", resizeEngine);
-
-  document.getElementById("exit-game").onclick = exitGame;
-}
-
-// =====================================
-// RESIZE
-// =====================================
-
-function resizeEngine() {
-  if (engine) {
-    engine.resize();
-  }
-}
-
-// =====================================
-// EXIT GAME
-// =====================================
-
-function exitGame() {
-  // Simpan sebelum sistem game dihentikan.
-  saveAllGameData();
-
-  if (disposePlayerController) {
-    disposePlayerController();
-    disposePlayerController = null;
-  }
-
-  if (disposeCombatSystem) {
-    disposeCombatSystem();
-    disposeCombatSystem = null;
-  }
-
-  if (enemyAI) {
-    enemyAI.dispose();
-    enemyAI = null;
-  }
-
-  if (disposeInventoryUI) {
-    disposeInventoryUI();
-    disposeInventoryUI = null;
-  }
-
-  if (disposeQuestUI) {
-    disposeQuestUI();
-    disposeQuestUI = null;
-  }
-
-  if (disposeWorldInteraction) {
-    disposeWorldInteraction();
-    disposeWorldInteraction = null;
-  }
-
-  if (shopUI) {
-    shopUI.dispose();
-    shopUI = null;
-  }
-
-  if (equipmentUI) {
-    equipmentUI.dispose();
-    equipmentUI = null;
-  }
-
-  shopSystem = null;
-  equipmentSystem = null;
-
-  window.removeEventListener("resize", resizeEngine);
-
-  const dialog = document.getElementById("npc-dialog");
-
-  if (dialog) {
-    dialog.remove();
-  }
-
-  if (engine) {
-    engine
+        console.log(
