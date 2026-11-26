@@ -1,5 +1,17 @@
 
 export function createShopSystem(playerStats, inventory) {
+  if (
+    !playerStats?.stats ||
+    typeof playerStats.spendGold !== "function" ||
+    typeof playerStats.addGold !== "function" ||
+    !inventory ||
+    typeof inventory.addItem !== "function" ||
+    typeof inventory.removeItem !== "function" ||
+    typeof inventory.getItems !== "function"
+  ) {
+    throw new Error("PlayerStats atau Inventory tidak valid.");
+  }
+
   const catalog = [
     {
       id: "health_potion",
@@ -25,8 +37,6 @@ export function createShopSystem(playerStats, inventory) {
       sellPrice: 7,
       description: "Token yang ditemukan dari Goblin."
     },
-
-    // Weapons
     {
       id: "iron_sword",
       name: "Iron Sword",
@@ -51,8 +61,6 @@ export function createShopSystem(playerStats, inventory) {
       sellPrice: 60,
       description: "Tongkat sihir dengan bonus attack."
     },
-
-    // Armor
     {
       id: "leather_armor",
       name: "Leather Armor",
@@ -69,8 +77,6 @@ export function createShopSystem(playerStats, inventory) {
       sellPrice: 90,
       description: "Armor kuat dengan bonus defense."
     },
-
-    // Accessories
     {
       id: "bronze_ring",
       name: "Bronze Ring",
@@ -107,30 +113,26 @@ export function createShopSystem(playerStats, inventory) {
     }
 
     const totalPrice = item.price * quantity;
+    const currentGold = Number(playerStats.stats.gold);
 
-    if (playerStats.stats.gold < totalPrice) {
+    if (
+      !Number.isFinite(currentGold) ||
+      currentGold < totalPrice
+    ) {
       return {
         success: false,
         message: "Gold tidak cukup."
       };
     }
 
-    const added = inventory.addItem(
-      item.name,
-      quantity,
-      item.type
-    );
-
-    if (!added) {
+    if (!inventory.addItem(item.name, quantity, item.type)) {
       return {
         success: false,
         message: "Inventory penuh."
       };
     }
 
-    const paid = playerStats.spendGold(totalPrice);
-
-    if (!paid) {
+    if (!playerStats.spendGold(totalPrice)) {
       inventory.removeItem(item.name, quantity);
 
       return {
@@ -148,19 +150,21 @@ export function createShopSystem(playerStats, inventory) {
 
   function sellItem(name, quantity = 1) {
     if (
+      typeof name !== "string" ||
+      !name.trim() ||
       !Number.isInteger(quantity) ||
       quantity <= 0 ||
       quantity > 99
     ) {
       return {
         success: false,
-        message: "Jumlah penjualan tidak valid."
+        message: "Data penjualan tidak valid."
       };
     }
 
     const item = catalog.find(entry => entry.name === name);
 
-    if (!item) {
+    if (!item || item.sellPrice <= 0) {
       return {
         success: false,
         message: "Barang ini tidak dapat dijual."
@@ -168,19 +172,20 @@ export function createShopSystem(playerStats, inventory) {
     }
 
     const ownedItem = inventory.getItems().find(
-      entry => entry.name === name
+      entry =>
+        entry.name === name &&
+        Number.isInteger(entry.quantity) &&
+        entry.quantity >= quantity
     );
 
-    if (!ownedItem || ownedItem.quantity < quantity) {
+    if (!ownedItem) {
       return {
         success: false,
         message: "Jumlah barang tidak cukup."
       };
     }
 
-    const removed = inventory.removeItem(name, quantity);
-
-    if (!removed) {
+    if (!inventory.removeItem(name, quantity)) {
       return {
         success: false,
         message: "Penjualan gagal."
@@ -189,7 +194,14 @@ export function createShopSystem(playerStats, inventory) {
 
     const earnedGold = item.sellPrice * quantity;
 
-    playerStats.addGold(earnedGold);
+    if (!playerStats.addGold(earnedGold)) {
+      inventory.addItem(name, quantity, ownedItem.type);
+
+      return {
+        success: false,
+        message: "Gagal menerima Gold."
+      };
+    }
 
     return {
       success: true,
@@ -204,4 +216,4 @@ export function createShopSystem(playerStats, inventory) {
     buyItem,
     sellItem
   };
-}
+      }
