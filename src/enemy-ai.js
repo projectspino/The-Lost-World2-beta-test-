@@ -4,6 +4,7 @@ import * as BABYLON from "@babylonjs/core";
 export function createEnemyAI(scene, player, onPlayerHit = () => {}) {
   const enemies = [];
   let disposed = false;
+  let nextEnemyId = 1;
 
   const enemyTypes = [
     {
@@ -59,28 +60,20 @@ export function createEnemyAI(scene, player, onPlayerHit = () => {}) {
       type.color
     );
 
-    let body;
-
     if (type.name === "Dire Wolf") {
-      body = BABYLON.MeshBuilder.CreateBox(
+      const body = BABYLON.MeshBuilder.CreateBox(
         `${type.name}-body-${index}`,
-        {
-          width: 1.25,
-          height: 0.65,
-          depth: 0.75
-        },
+        { width: 1.25, height: 0.65, depth: 0.75 },
         scene
       );
 
       body.position.y = 0.65;
+      body.material = material;
+      body.parent = root;
 
       const head = BABYLON.MeshBuilder.CreateBox(
         `${type.name}-head-${index}`,
-        {
-          width: 0.55,
-          height: 0.5,
-          depth: 0.55
-        },
+        { width: 0.55, height: 0.5, depth: 0.55 },
         scene
       );
 
@@ -91,11 +84,7 @@ export function createEnemyAI(scene, player, onPlayerHit = () => {}) {
       for (let i = 0; i < 4; i++) {
         const leg = BABYLON.MeshBuilder.CreateBox(
           `${type.name}-leg-${index}-${i}`,
-          {
-            width: 0.18,
-            height: 0.55,
-            depth: 0.18
-          },
+          { width: 0.18, height: 0.55, depth: 0.18 },
           scene
         );
 
@@ -108,16 +97,10 @@ export function createEnemyAI(scene, player, onPlayerHit = () => {}) {
         leg.material = material;
         leg.parent = root;
       }
-
-      body.material = material;
-      body.parent = root;
     } else {
-      body = BABYLON.MeshBuilder.CreateCapsule(
+      const body = BABYLON.MeshBuilder.CreateCapsule(
         `${type.name}-body-${index}`,
-        {
-          height: 1.8,
-          radius: 0.42
-        },
+        { height: 1.8, radius: 0.42 },
         scene
       );
 
@@ -127,9 +110,7 @@ export function createEnemyAI(scene, player, onPlayerHit = () => {}) {
 
       const head = BABYLON.MeshBuilder.CreateSphere(
         `${type.name}-head-${index}`,
-        {
-          diameter: 0.65
-        },
+        { diameter: 0.65 },
         scene
       );
 
@@ -145,136 +126,112 @@ export function createEnemyAI(scene, player, onPlayerHit = () => {}) {
   }
 
   function createGolemBody(position) {
-    const root = new BABYLON.TransformNode(
-      "Ancient-Golem",
-      scene
-    );
+    const root = new BABYLON.TransformNode("Ancient-Golem", scene);
 
-    const stoneMaterial = createMaterial(
+    const stone = createMaterial(
       "golem-stone-material",
       new BABYLON.Color3(0.28, 0.25, 0.22)
     );
 
-    const darkMaterial = createMaterial(
-      "golem-dark-stone-material",
+    const dark = createMaterial(
+      "golem-dark-material",
       new BABYLON.Color3(0.12, 0.12, 0.14)
     );
 
-    const eyeMaterial = new BABYLON.StandardMaterial(
-      "golem-eye-material",
-      scene
-    );
+    const eyes = new BABYLON.StandardMaterial("golem-eye-material", scene);
+    eyes.diffuseColor = new BABYLON.Color3(0.9, 0.25, 0.05);
+    eyes.emissiveColor = new BABYLON.Color3(0.8, 0.12, 0.02);
 
-    eyeMaterial.diffuseColor = new BABYLON.Color3(0.9, 0.25, 0.05);
-    eyeMaterial.emissiveColor = new BABYLON.Color3(0.8, 0.12, 0.02);
+    function part(name, size, positionValue, material) {
+      const mesh = BABYLON.MeshBuilder.CreateBox(
+        name,
+        size,
+        scene
+      );
 
-    const body = BABYLON.MeshBuilder.CreateBox(
+      mesh.position.copyFrom(positionValue);
+      mesh.material = material;
+      mesh.parent = root;
+      return mesh;
+    }
+
+    part(
       "golem-body",
-      {
-        width: 2.2,
-        height: 2.8,
-        depth: 1.5
-      },
-      scene
+      { width: 2.2, height: 2.8, depth: 1.5 },
+      new BABYLON.Vector3(0, 2.1, 0),
+      stone
     );
 
-    body.position.y = 2.1;
-    body.material = stoneMaterial;
-    body.parent = root;
-
-    const head = BABYLON.MeshBuilder.CreateBox(
+    part(
       "golem-head",
-      {
-        width: 1.5,
-        height: 1.3,
-        depth: 1.3
-      },
-      scene
+      { width: 1.5, height: 1.3, depth: 1.3 },
+      new BABYLON.Vector3(0, 4.15, 0),
+      dark
     );
 
-    head.position.y = 4.15;
-    head.material = darkMaterial;
-    head.parent = root;
+    for (const x of [-0.38, 0.38]) {
+      const eye = BABYLON.MeshBuilder.CreateSphere(
+        "golem-eye",
+        { diameter: 0.22 },
+        scene
+      );
 
-    const leftEye = BABYLON.MeshBuilder.CreateSphere(
-      "golem-left-eye",
-      { diameter: 0.22 },
-      scene
-    );
+      eye.position.set(x, 4.25, 0.68);
+      eye.material = eyes;
+      eye.parent = root;
+    }
 
-    leftEye.position.set(-0.38, 4.25, 0.68);
-    leftEye.material = eyeMaterial;
-    leftEye.parent = root;
-
-    const rightEye = BABYLON.MeshBuilder.CreateSphere(
-      "golem-right-eye",
-      { diameter: 0.22 },
-      scene
-    );
-
-    rightEye.position.set(0.38, 4.25, 0.68);
-    rightEye.material = eyeMaterial;
-    rightEye.parent = root;
-
-    const leftArm = BABYLON.MeshBuilder.CreateBox(
+    part(
       "golem-left-arm",
-      {
-        width: 0.8,
-        height: 2.3,
-        depth: 0.9
-      },
-      scene
+      { width: 0.8, height: 2.3, depth: 0.9 },
+      new BABYLON.Vector3(-1.45, 2.15, 0),
+      stone
     );
 
-    leftArm.position.set(-1.45, 2.15, 0);
-    leftArm.material = stoneMaterial;
-    leftArm.parent = root;
-
-    const rightArm = BABYLON.MeshBuilder.CreateBox(
+    part(
       "golem-right-arm",
-      {
-        width: 0.8,
-        height: 2.3,
-        depth: 0.9
-      },
-      scene
+      { width: 0.8, height: 2.3, depth: 0.9 },
+      new BABYLON.Vector3(1.45, 2.15, 0),
+      stone
     );
 
-    rightArm.position.set(1.45, 2.15, 0);
-    rightArm.material = stoneMaterial;
-    rightArm.parent = root;
-
-    const leftLeg = BABYLON.MeshBuilder.CreateBox(
+    part(
       "golem-left-leg",
-      {
-        width: 0.85,
-        height: 1.4,
-        depth: 1
-      },
-      scene
+      { width: 0.85, height: 1.4, depth: 1 },
+      new BABYLON.Vector3(-0.6, 0.7, 0),
+      dark
     );
 
-    leftLeg.position.set(-0.6, 0.7, 0);
-    leftLeg.material = darkMaterial;
-    leftLeg.parent = root;
-
-    const rightLeg = BABYLON.MeshBuilder.CreateBox(
+    part(
       "golem-right-leg",
-      {
-        width: 0.85,
-        height: 1.4,
-        depth: 1
-      },
-      scene
+      { width: 0.85, height: 1.4, depth: 1 },
+      new BABYLON.Vector3(0.6, 0.7, 0),
+      dark
     );
-
-    rightLeg.position.set(0.6, 0.7, 0);
-    rightLeg.material = darkMaterial;
-    rightLeg.parent = root;
 
     root.position.copyFrom(position);
-
     return root;
+  }
+
+  function addEnemy(type, mesh, extra = {}) {
+    const enemy = {
+      id: nextEnemyId++,
+      name: type.name,
+      mesh,
+      health: type.health,
+      maxHealth: type.health,
+      speed: type.speed,
+      damage: type.damage,
+      attackRange: type.attackRange,
+      attackDelay: type.attackDelay,
+      attackTimer: 0,
+      alive: true,
+      rewarded: false,
+      ...extra
+    };
+
+    enemies.push(enemy);
+    return enemy;
   }
 
   function spawnEnemy(type, index, total) {
@@ -288,19 +245,7 @@ export function createEnemyAI(scene, player, onPlayerHit = () => {}) {
     );
 
     const mesh = createEnemyBody(type, position, index);
-
-    enemies.push({
-      name: type.name,
-      mesh,
-      health: type.health,
-      maxHealth: type.health,
-      speed: type.speed,
-      damage: type.damage,
-      attackRange: type.attackRange,
-      attackDelay: type.attackDelay,
-      attackTimer: 0,
-      alive: true
-    });
+    addEnemy(type, mesh);
   }
 
   function spawnBoss() {
@@ -313,22 +258,11 @@ export function createEnemyAI(scene, player, onPlayerHit = () => {}) {
       attackDelay: 2.5
     };
 
-    const position = new BABYLON.Vector3(65, 0, 43);
-    const mesh = createGolemBody(position);
+    const mesh = createGolemBody(
+      new BABYLON.Vector3(65, 0, 43)
+    );
 
-    enemies.push({
-      name: bossType.name,
-      mesh,
-      health: bossType.health,
-      maxHealth: bossType.health,
-      speed: bossType.speed,
-      damage: bossType.damage,
-      attackRange: bossType.attackRange,
-      attackDelay: bossType.attackDelay,
-      attackTimer: 0,
-      alive: true,
-      isBoss: true
-    });
+    addEnemy(bossType, mesh, { isBoss: true });
   }
 
   let enemyIndex = 0;
@@ -343,7 +277,15 @@ export function createEnemyAI(scene, player, onPlayerHit = () => {}) {
   spawnBoss();
 
   function updateEnemy(enemy, deltaTime) {
-    if (!enemy.alive || !enemy.mesh || !player) return;
+    if (
+      !enemy.alive ||
+      !enemy.mesh ||
+      enemy.mesh.isDisposed() ||
+      !player ||
+      player.isDisposed?.()
+    ) {
+      return;
+    }
 
     const direction = player.position.subtract(
       enemy.mesh.position
@@ -375,7 +317,12 @@ export function createEnemyAI(scene, player, onPlayerHit = () => {}) {
       enemy.attackTimer -= deltaTime;
 
       if (enemy.attackTimer <= 0) {
-        onPlayerHit(enemy.damage, enemy.name);
+        try {
+          onPlayerHit(enemy.damage, enemy.name, enemy);
+        } catch (error) {
+          console.error("Gagal menjalankan serangan monster:", error);
+        }
+
         enemy.attackTimer = enemy.attackDelay;
       }
     }
@@ -396,19 +343,33 @@ export function createEnemyAI(scene, player, onPlayerHit = () => {}) {
 
   const observer = scene.onBeforeRenderObservable.add(update);
 
-  function damageEnemy(enemyName, damage) {
-    const enemy = enemies.find(item =>
-      item.name === enemyName && item.alive
-    );
+  function damageEnemy(target, damage) {
+    if (disposed) return false;
 
-    if (!enemy) return false;
+    const enemy =
+      typeof target === "object" && target !== null
+        ? enemies.find(item => item === target)
+        : enemies.find(
+            item => item.id === target && item.alive
+          );
 
-    enemy.health -= Math.max(0, damage);
+    if (!enemy || !enemy.alive) return false;
+
+    const amount = Number(damage);
+
+    if (!Number.isFinite(amount) || amount <= 0) {
+      return false;
+    }
+
+    enemy.health = Math.max(0, enemy.health - amount);
 
     if (enemy.health <= 0) {
-      enemy.health = 0;
       enemy.alive = false;
-      enemy.mesh.setEnabled(false);
+
+      if (enemy.mesh && !enemy.mesh.isDisposed()) {
+        enemy.mesh.setEnabled(false);
+      }
+
       return true;
     }
 
@@ -416,7 +377,12 @@ export function createEnemyAI(scene, player, onPlayerHit = () => {}) {
   }
 
   function getEnemies() {
-    return enemies;
+    return enemies.filter(enemy => enemy.alive);
+  }
+
+  function getEnemyById(id) {
+    const enemy = enemies.find(item => item.id === id);
+    return enemy ? { ...enemy } : null;
   }
 
   function dispose() {
@@ -426,7 +392,7 @@ export function createEnemyAI(scene, player, onPlayerHit = () => {}) {
     scene.onBeforeRenderObservable.remove(observer);
 
     for (const enemy of enemies) {
-      if (enemy.mesh) {
+      if (enemy.mesh && !enemy.mesh.isDisposed()) {
         enemy.mesh.dispose(false, true);
       }
     }
@@ -436,8 +402,8 @@ export function createEnemyAI(scene, player, onPlayerHit = () => {}) {
 
   return {
     getEnemies,
+    getEnemyById,
     damageEnemy,
     dispose
   };
-      }
-  
+  }
