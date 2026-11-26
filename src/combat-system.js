@@ -142,11 +142,7 @@ export function createCombatSystem(
       enemy => enemy.name === "Ancient Golem"
     );
 
-    if (
-      !boss ||
-      !boss.alive ||
-      !isMeshValid(boss.mesh)
-    ) {
+    if (!boss || !boss.alive || !isMeshValid(boss.mesh)) {
       bossBar.style.display = "none";
       return;
     }
@@ -202,10 +198,7 @@ export function createCombatSystem(
       "Ancient Golem": { xp: 300, gold: 250 }
     };
 
-    const reward = rewards[enemy.name] ?? {
-      xp: 10,
-      gold: 0
-    };
+    const reward = rewards[enemy.name] ?? { xp: 10, gold: 0 };
 
     if (typeof playerStats.addXP === "function") {
       playerStats.addXP(reward.xp);
@@ -248,11 +241,12 @@ export function createCombatSystem(
   }
 
   function defeatEnemy(enemy) {
-    if (!enemy || !enemy.alive) return;
+    if (!enemy || enemy.rewarded) return;
 
     enemy.alive = false;
+    enemy.rewarded = true;
 
-    giveEnemyReward(enemy);
+    giveEnemyReward({ ...enemy, rewarded: false });
 
     if (isMeshValid(enemy.mesh)) {
       enemy.mesh.dispose();
@@ -285,10 +279,7 @@ export function createCombatSystem(
       }
     }
 
-    if (
-      enemyAI &&
-      typeof enemyAI.getEnemies === "function"
-    ) {
+    if (enemyAI && typeof enemyAI.getEnemies === "function") {
       for (const enemy of enemyAI.getEnemies()) {
         if (enemy.alive && isMeshValid(enemy.mesh)) {
           targets.push({
@@ -304,9 +295,7 @@ export function createCombatSystem(
   }
 
   function attack() {
-    if (disposed || !player || player.isDisposed?.()) {
-      return;
-    }
+    if (disposed || !player || player.isDisposed?.()) return;
 
     let nearestTarget = null;
     let nearestDistance = 3.5;
@@ -330,7 +319,6 @@ export function createCombatSystem(
 
     if (nearestTarget.source === "goblin") {
       enemy.hp = Math.max(0, enemy.hp - damage);
-
       enemy.mesh.scaling.set(1.15, 0.9, 1.15);
 
       if (enemy.hp <= 0) {
@@ -339,17 +327,14 @@ export function createCombatSystem(
         enemy.mesh.scaling.set(1, 1, 1);
       }
     } else {
-      if (
-        !enemyAI ||
-        typeof enemyAI.damageEnemy !== "function"
-      ) {
+      if (!enemyAI || typeof enemyAI.damageEnemy !== "function") {
         console.warn("Enemy AI tidak menyediakan damageEnemy().");
         return;
       }
 
-      enemyAI.damageEnemy(enemy, damage);
+      const defeated = enemyAI.damageEnemy(enemy, damage);
 
-      if (!enemy.alive || enemy.health <= 0) {
+      if (defeated) {
         defeatEnemy(enemy);
       }
     }
@@ -363,13 +348,9 @@ export function createCombatSystem(
     if (disposed) return;
 
     disposed = true;
-
     attackButton.removeEventListener("click", attack);
 
-    scene.onBeforeRenderObservable.remove(
-      bossBarObserver
-    );
-
+    scene.onBeforeRenderObservable.remove(bossBarObserver);
     bossBar.remove();
 
     for (const goblin of goblins) {
@@ -379,9 +360,7 @@ export function createCombatSystem(
     }
 
     goblins.length = 0;
-
     goblinMaterial.dispose();
     eyeMaterial.dispose();
   };
-                                       }
-    
+        }
