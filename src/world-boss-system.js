@@ -10,8 +10,43 @@ export class WorldBossSystem {
     this.cooldowns = new Map();
   }
 
+  notify(callback, data) {
+    if (typeof callback !== "function") return;
+
+    try {
+      callback(data);
+    } catch (error) {
+      console.error("World Boss callback error:", error);
+    }
+  }
+
   registerBoss(id, data = {}) {
-    if (!id || this.bosses.has(id)) return false;
+    if (
+      typeof id !== "string" ||
+      !id.trim() ||
+      this.bosses.has(id)
+    ) {
+      return false;
+    }
+
+    const phases = Array.isArray(data.phases)
+      ? data.phases
+          .filter(item =>
+            item &&
+            Number.isFinite(item.healthPercent)
+          )
+          .map(item => ({
+            healthPercent: Math.max(
+              0,
+              Math.min(100, item.healthPercent)
+            ),
+            name: String(item.name ?? "Phase")
+          }))
+          .sort((a, b) => b.healthPercent - a.healthPercent)
+      : [
+          { healthPercent: 70, name: "Enraged" },
+          { healthPercent: 30, name: "Final Phase" }
+        ];
 
     this.bosses.set(id, {
       id,
@@ -20,13 +55,10 @@ export class WorldBossSystem {
       damage: Math.max(0, Number(data.damage) || 30),
       defense: Math.max(0, Number(data.defense) || 5),
       cooldown: Math.max(0, Number(data.cooldown) || 900),
-      rewards: Array.isArray(data.rewards) ? data.rewards : [],
-      phases: Array.isArray(data.phases)
-        ? data.phases
-        : [
-            { healthPercent: 70, name: "Enraged" },
-            { healthPercent: 30, name: "Final Phase" }
-          ]
+      rewards: Array.isArray(data.rewards)
+        ? data.rewards.map(item => ({ ...item }))
+        : [],
+      phases
     });
 
     return true;
@@ -36,12 +68,15 @@ export class WorldBossSystem {
     if (this.activeBoss) return false;
 
     const boss = this.bosses.get(id);
-    if (!boss || (this.cooldowns.get(id) ?? 0) > 0) {
+
+    if (!boss || this.getCooldown(id) > 0) {
       return false;
     }
 
     this.activeBoss = {
       ...boss,
+      rewards: boss.rewards.map(item => ({ ...item })),
+      phases: boss.phases.map(item => ({ ...item })),
       health: boss.maxHealth,
       phase: 0,
       alive: true,
@@ -55,8 +90,11 @@ export class WorldBossSystem {
   damageBoss(amount) {
     if (!this.activeBoss?.alive) return false;
 
-    const damage = Math.max(0, Number(amount) || 0);
-    if (damage <= 0) return false;
+    const damage = Number(amount);
+
+    if (!Number.isFinite(damage) || damage <= 0) {
+      return false;
+    }
 
     this.activeBoss.health = Math.max(
       0,
@@ -92,6 +130,7 @@ export class WorldBossSystem {
       this.notify(this.onPhaseChange, {
         bossId: boss.id,
         phase: nextPhase,
+        phaseName: boss.phases[nextPhase - 1]?.name ?? null,
         healthPercent: percentage
       });
     }
@@ -101,14 +140,11 @@ export class WorldBossSystem {
     if (!this.activeBoss) return false;
 
     const defeated = this.activeBoss;
+
     defeated.alive = false;
     defeated.health = 0;
 
-    this.cooldowns.set(
-      defeated.id,
-      defeated.cooldown
-    );
-
+    this.cooldowns.set(defeated.id, defeated.cooldown);
     this.activeBoss = null;
 
     this.notify(this.onDefeated, {
@@ -126,10 +162,13 @@ export class WorldBossSystem {
     }
 
     for (const [id, remaining] of this.cooldowns) {
-      this.cooldowns.set(
-        id,
-        Math.max(0, remaining - deltaSeconds)
-      );
+      const next = Math.max(0, remaining - deltaSeconds);
+
+      if (next <= 0) {
+        this.cooldowns.delete(id);
+      } else {
+        this.cooldowns.set(id, next);
+      }
     }
   }
 
@@ -148,19 +187,14 @@ export class WorldBossSystem {
       id: boss.id,
       name: boss.name,
       maxHealth: boss.maxHealth,
-      available: !this.activeBoss &&
-        (this.cooldowns.get(boss.id) ?? 0) <= 0
+      available:
+        !this.activeBoss &&
+        this.getCooldown(boss.id) <= 0
     }));
   }
 
   getCooldown(id) {
     return Math.max(0, this.cooldowns.get(id) ?? 0);
-  }
-
-  notify(callback, data) {
-    if (typeof callback === "function") {
-      callback(data);
-    }
   }
 
   reset() {
@@ -175,5 +209,4 @@ export class WorldBossSystem {
     this.onPhaseChange = null;
     this.onDefeated = null;
   }
-      }
-      
+}
