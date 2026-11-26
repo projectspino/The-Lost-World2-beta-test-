@@ -1,10 +1,4 @@
 
-const equipmentSlots = {
-  weapon: null,
-  armor: null,
-  accessory: null
-};
-
 const equipmentCatalog = [
   {
     id: "iron_sword",
@@ -57,16 +51,34 @@ const equipmentCatalog = [
 ];
 
 export function createEquipmentSystem(inventory) {
+  const equipmentSlots = {
+    weapon: null,
+    armor: null,
+    accessory: null
+  };
+
   function getCatalog() {
     return equipmentCatalog.map(item => ({ ...item }));
   }
 
   function getEquipment() {
-    return { ...equipmentSlots };
+    return {
+      weapon: equipmentSlots.weapon
+        ? { ...equipmentSlots.weapon }
+        : null,
+      armor: equipmentSlots.armor
+        ? { ...equipmentSlots.armor }
+        : null,
+      accessory: equipmentSlots.accessory
+        ? { ...equipmentSlots.accessory }
+        : null
+    };
   }
 
   function equip(itemId) {
-    const item = equipmentCatalog.find(entry => entry.id === itemId);
+    const item = equipmentCatalog.find(
+      entry => entry.id === itemId
+    );
 
     if (!item) {
       return {
@@ -86,6 +98,8 @@ export function createEquipmentSystem(inventory) {
       };
     }
 
+    const previousItem = equipmentSlots[item.slot];
+
     if (!inventory.removeItem(item.name, 1)) {
       return {
         success: false,
@@ -93,13 +107,24 @@ export function createEquipmentSystem(inventory) {
       };
     }
 
-    const previousItem = equipmentSlots[item.slot];
-
     if (previousItem) {
-      inventory.addItem(previousItem.name, 1, "Equipment");
+      const returned = inventory.addItem(
+        previousItem.name,
+        1,
+        "Equipment"
+      );
+
+      if (!returned) {
+        inventory.addItem(item.name, 1, "Equipment");
+
+        return {
+          success: false,
+          message: "Inventori penuh. Perlengkapan lama tidak berubah."
+        };
+      }
     }
 
-    equipmentSlots[item.slot] = item;
+    equipmentSlots[item.slot] = { ...item };
 
     return {
       success: true,
@@ -108,7 +133,12 @@ export function createEquipmentSystem(inventory) {
   }
 
   function unequip(slot) {
-    if (!Object.prototype.hasOwnProperty.call(equipmentSlots, slot)) {
+    if (
+      !Object.prototype.hasOwnProperty.call(
+        equipmentSlots,
+        slot
+      )
+    ) {
       return {
         success: false,
         message: "Slot tidak valid."
@@ -135,7 +165,7 @@ export function createEquipmentSystem(inventory) {
 
     return {
       success: true,
-      message: item.name + " dilepas."
+      message: item.name + " berhasil dilepas."
     };
   }
 
@@ -150,7 +180,10 @@ export function createEquipmentSystem(inventory) {
       defense += item.defense;
     }
 
-    return { attack, defense };
+    return {
+      attack,
+      defense
+    };
   }
 
   return {
@@ -160,4 +193,4 @@ export function createEquipmentSystem(inventory) {
     unequip,
     getBonuses
   };
-                           }
+}
