@@ -1,5 +1,5 @@
-
 import * as BABYLON from "@babylonjs/core";
+import { createNPC } from "./characters/npc/npc-factory.js";
 
 export function buildWorld(
   scene,
@@ -46,15 +46,6 @@ export function buildWorld(
   torchMaterial.diffuseColor = new BABYLON.Color3(1, 0.35, 0.05);
   torchMaterial.emissiveColor = new BABYLON.Color3(1, 0.18, 0.02);
 
-  const npcClothes = [
-    material("npc-clothes-1", "#315D9B"),
-    material("npc-clothes-2", "#8B4936"),
-    material("npc-clothes-3", "#668447"),
-    material("npc-clothes-4", "#B58A32")
-  ];
-
-  const skin = material("npc-skin", "#D5A477");
-
   // =====================================
   // DUNIA UTAMA
   // =====================================
@@ -66,7 +57,6 @@ export function buildWorld(
   );
   ground.material = grass;
 
-  // Laut selatan
   const ocean = BABYLON.MeshBuilder.CreateGround(
     "southern-ocean",
     { width: 420, height: 85 },
@@ -75,7 +65,6 @@ export function buildWorld(
   ocean.position.set(0, -0.05, -175);
   ocean.material = deepWater;
 
-  // Pantai
   const beach = BABYLON.MeshBuilder.CreateGround(
     "southern-beach",
     { width: 420, height: 32 },
@@ -84,7 +73,6 @@ export function buildWorld(
   beach.position.set(0, 0.02, -116);
   beach.material = sand;
 
-  // Sungai lama
   const river = BABYLON.MeshBuilder.CreateGround(
     "river",
     { width: 9, height: 150 },
@@ -93,7 +81,6 @@ export function buildWorld(
   river.position.set(22, 0.04, 0);
   river.material = water;
 
-  // Jalan desa lama
   const road = BABYLON.MeshBuilder.CreateGround(
     "village-road",
     { width: 8, height: 70 },
@@ -102,7 +89,6 @@ export function buildWorld(
   road.position.set(-12, 0.06, 0);
   road.material = path;
 
-  // Jalur menuju hutan timur
   const eastRoad = BABYLON.MeshBuilder.CreateGround(
     "east-forest-road",
     { width: 110, height: 7 },
@@ -111,7 +97,6 @@ export function buildWorld(
   eastRoad.position.set(105, 0.07, 0);
   eastRoad.material = path;
 
-  // Jalur menuju pantai
   const southRoad = BABYLON.MeshBuilder.CreateGround(
     "south-beach-road",
     { width: 7, height: 95 },
@@ -120,7 +105,6 @@ export function buildWorld(
   southRoad.position.set(-12, 0.08, -75);
   southRoad.material = path;
 
-  // Jalur menuju rawa
   const westRoad = BABYLON.MeshBuilder.CreateGround(
     "west-swamp-road",
     { width: 90, height: 7 },
@@ -129,7 +113,6 @@ export function buildWorld(
   westRoad.position.set(-100, 0.07, 0);
   westRoad.material = path;
 
-  // Jalur menuju pegunungan
   const northRoad = BABYLON.MeshBuilder.CreateGround(
     "north-mountain-road",
     { width: 7, height: 100 },
@@ -376,71 +359,62 @@ export function buildWorld(
   }
 
   // =====================================
-  // NPC DESA
+  // NPC DESA - CHARACTER FACTORY
   // =====================================
 
   const npcData = [
     {
       name: "Eldric",
+      type: "villager",
       dialogue: "Selamat datang di desa kami, petualang. Hutan di sebelah timur menyimpan banyak bahaya.",
       x: -12,
-      z: -10,
-      color: 0
+      z: -10
     },
     {
       name: "Mira",
+      type: "villager",
       dialogue: "Jika kamu menemukan Wood, kumpulkanlah. Bahan itu berguna untuk membuat perlengkapan.",
       x: -5,
-      z: -10,
-      color: 1
+      z: -10
     },
     {
       name: "Bram",
+      type: "guard",
       dialogue: "Monster berkeliaran di dekat reruntuhan. Pastikan kamu sudah siap sebelum pergi ke sana.",
       x: -24,
-      z: 5,
-      color: 2
+      z: 5
     },
     {
       name: "Tomas",
+      type: "merchant",
       dialogue: "Selamat datang di toko desa! Aku menjual ramuan dan perlengkapan untuk para petualang.",
       x: -18,
-      z: -2,
-      color: 3,
-      merchant: true
+      z: -2
     }
   ];
 
-  npcData.forEach((data, index) => {
-    const body = BABYLON.MeshBuilder.CreateCapsule(
-      "npc-body-" + index,
-      { height: 2.2, radius: 0.45 },
-      scene
-    );
+  const npcInstances = [];
 
-    body.position.set(data.x, 1.1, data.z);
-    body.material = npcClothes[data.color];
-    body.isPickable = true;
-
-    const head = BABYLON.MeshBuilder.CreateSphere(
-      "npc-head-" + index,
-      { diameter: 0.8, segments: 8 },
-      scene
-    );
-
-    head.position.set(data.x, 2.55, data.z);
-    head.material = skin;
-    head.isPickable = true;
+  npcData.forEach(data => {
+    const npc = createNPC(scene, data.type, {
+      position: new BABYLON.Vector3(data.x, 0, data.z)
+    });
 
     const npcMetadata = {
       npc: true,
       npcName: data.name,
       dialogue: data.dialogue,
-      merchant: data.merchant === true
+      merchant: data.type === "merchant"
     };
 
-    body.metadata = npcMetadata;
-    head.metadata = npcMetadata;
+    npc.root.metadata = npcMetadata;
+
+    npc.root.getChildMeshes().forEach(mesh => {
+      mesh.metadata = npcMetadata;
+      mesh.isPickable = true;
+    });
+
+    npcInstances.push(npc);
   });
 
   // =====================================
@@ -487,7 +461,7 @@ export function buildWorld(
   }
 
   // =====================================
-  // DUNGEON KUNO - LOKASI LAMA
+  // DUNGEON KUNO
   // =====================================
 
   const dungeonX = 65;
@@ -708,6 +682,11 @@ export function buildWorld(
 
   return function disposeWorldInteraction() {
     scene.onPointerObservable.remove(pointerObserver);
+
+    npcInstances.forEach(npc => {
+      if (npc && typeof npc.dispose === "function") {
+        npc.dispose();
+      }
+    });
   };
     }
-      
