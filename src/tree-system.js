@@ -5,7 +5,8 @@ import "@babylonjs/loaders/glTF";
 export async function createTreeSystem(
   scene,
   baseUrl,
-  onWoodCollected = () => {}
+  onWoodCollected = () => {},
+  collisionSystem = null
 ) {
   const assetPath =
     baseUrl + "assets/environment/forest/";
@@ -82,6 +83,33 @@ export async function createTreeSystem(
       mesh.metadata = metadata;
     });
 
+    // Collider batang pohon.
+    // Collider tidak terlihat dan tidak bisa dipilih dengan sentuhan.
+    let collider = null;
+
+    if (woodAmount > 0 && collisionSystem) {
+      collider = BABYLON.MeshBuilder.CreateCylinder(
+        name + "-collision",
+        {
+          height: 5.5,
+          diameter: 1.1,
+          tessellation: 8
+        },
+        scene
+      );
+
+      collider.parent = root;
+      collider.position.set(0, 2.75, 0);
+      collider.isVisible = false;
+      collider.isPickable = false;
+      collider.checkCollisions = false;
+      collider.metadata = null;
+
+      collisionSystem.addCollider(collider);
+
+      metadata.treeCollider = collider;
+    }
+
     instances.push(root);
 
     return root;
@@ -110,7 +138,10 @@ export async function createTreeSystem(
     return { dispose };
   }
 
+  // =====================================
   // HUTAN TIMUR
+  // =====================================
+
   for (let i = 0; i < 34; i++) {
     const angle = i * 2.399;
     const radius = 24 + (i % 7) * 12;
@@ -135,7 +166,10 @@ export async function createTreeSystem(
     );
   }
 
+  // =====================================
   // HUTAN TENGAH
+  // =====================================
+
   for (let i = 0; i < 12; i++) {
     const angle = i * 2.4;
     const radius = 38 + (i % 3) * 9;
@@ -158,7 +192,10 @@ export async function createTreeSystem(
     );
   }
 
+  // =====================================
   // SEMAK HUTAN
+  // =====================================
+
   for (let i = 0; i < 24; i++) {
     const angle = i * 2.4;
     const radius = 28 + (i % 5) * 9;
@@ -193,6 +230,12 @@ export async function createTreeSystem(
 
     instances.forEach(root => {
       if (!root.isDisposed()) {
+        const collider = root.metadata?.treeCollider;
+
+        if (collider && collisionSystem) {
+          collisionSystem.removeCollider(collider);
+        }
+
         root.dispose(false, true);
       }
     });
@@ -203,4 +246,4 @@ export async function createTreeSystem(
       container.dispose();
     });
   }
-}
+    }
