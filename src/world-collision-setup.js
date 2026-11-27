@@ -4,6 +4,10 @@ import { WorldColliderBuilder } from "./world-collider-builder.js";
 const COLLIDER_PREFIXES = [
   "collectable-tree-",
   "collectable-tree-forest-",
+  "forest-tree-",
+  "central-tree-",
+  "swamp-tree-",
+  "mountain-",
   "village-house-",
   "house-roof-",
   "ruin-",
