@@ -1,4 +1,3 @@
-
 import * as BABYLON from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
 import { createNPC } from "./characters/npc/npc-factory.js";
@@ -209,7 +208,6 @@ export function buildWorld(
 
     if (tree) {
       tree.name = "collectable-tree-forest-" + i;
-      tree.position.set(x, 0, z);
       tree.isPickable = true;
       tree.metadata = {
         collectable: true,
@@ -241,7 +239,7 @@ export function buildWorld(
     }
 
     modelRoot.position.set(5, 0, 0);
-    
+
     result.meshes.forEach(mesh => {
       mesh.isPickable = false;
       mesh.checkCollisions = false;
@@ -350,7 +348,6 @@ export function buildWorld(
 
     if (tree) {
       tree.name = "collectable-tree-" + i;
-      tree.position.set(x, 0, z);
       tree.isPickable = true;
       tree.metadata = {
         collectable: true,
@@ -725,4 +722,3 @@ export function buildWorld(
     });
   };
 }
-  
