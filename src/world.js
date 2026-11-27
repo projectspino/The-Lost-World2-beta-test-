@@ -1,8 +1,8 @@
-
 import * as BABYLON from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
 import { createNPC } from "./characters/npc/npc-factory.js";
 import { createTreeSystem } from "./tree-system.js";
+import { setupWorldCollisions } from "./world-collision-setup.js";
 
 export function buildWorld(
   scene,
@@ -16,7 +16,8 @@ export function buildWorld(
     if (typeof window !== "undefined") {
       window.alert("Memasuki " + dungeonName);
     }
-  }
+  },
+  collisionSystem = null
 ) {
   const material = (name, color) => {
     const mat = new BABYLON.StandardMaterial(name, scene);
@@ -58,7 +59,9 @@ export function buildWorld(
 
   createTreeSystem(
     scene,
-    import.meta.env.BASE_URL
+    import.meta.env.BASE_URL,
+    onWoodCollected,
+    collisionSystem
   ).then(system => {
     if (worldDisposed) {
       system.dispose();
@@ -383,9 +386,8 @@ export function buildWorld(
       Math.cos(i * 3) * 60
     );
     rock.material = stone;
-  }
-
-  // =====================================
+}
+    // =====================================
   // DUNGEON KUNO
   // =====================================
 
@@ -562,6 +564,24 @@ export function buildWorld(
   }
 
   // =====================================
+  // SISTEM TABRAKAN DUNIA
+  // =====================================
+
+  let worldCollisionSetup = null;
+
+  if (collisionSystem) {
+    worldCollisionSetup = setupWorldCollisions(
+      scene,
+      collisionSystem
+    );
+
+    console.log(
+      "Collider dunia berhasil didaftarkan:",
+      worldCollisionSetup.count
+    );
+  }
+
+  // =====================================
   // INTERAKSI DUNIA
   // =====================================
 
@@ -627,6 +647,11 @@ export function buildWorld(
       treeSystem = null;
     }
 
+    if (worldCollisionSetup) {
+      worldCollisionSetup.dispose();
+      worldCollisionSetup = null;
+    }
+
     scene.onPointerObservable.remove(pointerObserver);
 
     npcInstances.forEach(npc => {
@@ -636,4 +661,3 @@ export function buildWorld(
     });
   };
 }
-  
