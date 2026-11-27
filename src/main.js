@@ -3,6 +3,7 @@ import * as BABYLON from "@babylonjs/core";
 import "./styles/menu.css";
 
 import { buildWorld } from "./world.js";
+import { WorldCollisionSystem } from "./world-collision.js";
 import { createPlayerCharacter } from "./characters/player/character-factory.js";
 import { createPlayerController } from "./player-controller.js";
 import { createCombatSystem } from "./combat-system.js";
@@ -24,6 +25,7 @@ let scene = null;
 let camera = null;
 let player = null;
 let playerCharacter = null;
+let collisionSystem = null;
 
 let disposePlayerController = null;
 let disposeCombatSystem = null;
@@ -337,7 +339,7 @@ function addGameHudStyles() {
   `;
 
   document.head.appendChild(style);
-}
+                                                      }
 
 // =====================================
 // NPC DIALOG
@@ -474,20 +476,23 @@ function startGame() {
   `;
 
   const canvas = document.getElementById("game-canvas");
-const debugBox = document.createElement("pre");
-debugBox.style.cssText =
-  "position:fixed;z-index:99999;top:80px;left:10px;right:10px;padding:10px;background:#300;color:white;font:12px monospace;white-space:pre-wrap;";
-debugBox.textContent =
-  "WebGL: " + (BABYLON.Engine.isSupported() ? "DIDUKUNG" : "TIDAK DIDUKUNG");
-document.getElementById("game-container").appendChild(debugBox);
 
-window.addEventListener("error", (e) => {
-  debugBox.textContent += "\nERROR: " + e.message;
-});
+  const debugBox = document.createElement("pre");
+  debugBox.style.cssText =
+    "position:fixed;z-index:99999;top:80px;left:10px;right:10px;padding:10px;background:#300;color:white;font:12px monospace;white-space:pre-wrap;";
+  debugBox.textContent =
+    "WebGL: " + (BABYLON.Engine.isSupported() ? "DIDUKUNG" : "TIDAK DIDUKUNG");
 
-window.addEventListener("unhandledrejection", (e) => {
-  debugBox.textContent += "\nPROMISE: " + (e.reason?.message || e.reason);
-});
+  document.getElementById("game-container").appendChild(debugBox);
+
+  window.addEventListener("error", (e) => {
+    debugBox.textContent += "\nERROR: " + e.message;
+  });
+
+  window.addEventListener("unhandledrejection", (e) => {
+    debugBox.textContent += "\nPROMISE: " + (e.reason?.message || e.reason);
+  });
+
   engine = new BABYLON.Engine(canvas, true, {
     preserveDrawingBuffer: false,
     stencil: false,
@@ -533,6 +538,9 @@ window.addEventListener("unhandledrejection", (e) => {
 
   player = playerCharacter.root;
   camera.lockedTarget = player;
+
+  // Sistem tabrakan dunia dan pemain.
+  collisionSystem = new WorldCollisionSystem(scene, player);
 
   // =====================================
   // PLAYER STATS & INVENTORY
@@ -640,7 +648,8 @@ window.addEventListener("unhandledrejection", (e) => {
         "Dungeon Kuno",
         "Kamu telah memasuki Dungeon Kuno. Jelajahi tempat ini dan bersiaplah menghadapi tantangan!"
       );
-    }
+    },
+    collisionSystem
   );
 
   // =====================================
@@ -662,7 +671,8 @@ window.addEventListener("unhandledrejection", (e) => {
     camera,
     player,
     joystick,
-    jumpButton
+    jumpButton,
+    collisionSystem
   );
 
   // =====================================
@@ -751,8 +761,8 @@ window.addEventListener("unhandledrejection", (e) => {
   window.addEventListener("resize", resizeEngine);
 
   document.getElementById("exit-game").onclick = exitGame;
-    }
-    
+}
+
 // =====================================
 // RESIZE
 // =====================================
@@ -798,6 +808,11 @@ function exitGame() {
   if (disposeWorldInteraction) {
     disposeWorldInteraction();
     disposeWorldInteraction = null;
+  }
+
+  if (collisionSystem) {
+    collisionSystem.dispose();
+    collisionSystem = null;
   }
 
   if (shopUI) {
