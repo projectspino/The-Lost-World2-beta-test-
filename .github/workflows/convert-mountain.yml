@@ -23,6 +23,7 @@ jobs:
 
       - name: Extract assets
         run: |
+          set -e
           cd public/assets/environment/mountain
           cat Mountain-Textures.part01 Mountain-Textures.part02 > Mountain-Textures.zip
           mkdir -p /tmp/mountain-fbx /tmp/mountain-textures
@@ -52,29 +53,35 @@ jobs:
 
           for model in models:
               bpy.ops.wm.read_factory_settings(use_empty=True)
-              bpy.ops.import_scene.fbx(filepath=str(model), use_image_search=True)
+              bpy.ops.import_scene.fbx(filepath=str(model))
 
-              for image in bpy.data.images:
-                  if image.source == "FILE":
-                      found = texture_map.get(Path(image.filepath).name.lower())
+              for img in bpy.data.images:
+                  if img.source == "FILE":
+                      name = Path(bpy.path.abspath(img.filepath)).name.lower()
+                      found = texture_map.get(name)
                       if found:
-                          image.filepath = str(found)
-                          image.reload()
-                      try:
-                          image.pack()
-                      except Exception:
-                          pass
+                          img.filepath = str(found)
+                          img.reload()
+                      if img.has_data:
+                          img.pack()
 
               target = output / (model.stem + ".glb")
               bpy.ops.export_scene.gltf(
                   filepath=str(target),
                   export_format="GLB",
-                  export_apply=True,
-                  export_image_format="AUTO"
+                  export_apply=True
               )
-              print("EXPORTED:", target)
 
-          print("TOTAL MODEL:", len(models))
+              if not target.exists() or target.stat().st_size == 0:
+                  raise RuntimeError("Export failed: " + model.name)
+
+              print("EXPORTED:", target.name)
+
+          exported = list(output.glob("*.glb"))
+          if len(exported) != len(models):
+              raise RuntimeError("GLB count does not match FBX count")
+
+          print("TOTAL MODEL:", len(exported))
           PY
 
       - name: Convert FBX to GLB
@@ -85,9 +92,8 @@ jobs:
       - name: Save GLB files
         run: |
           git config user.name "github-actions[bot]"
-          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git config user.email "41898282+users.noreply.github.com"
           git add public/assets/environment/mountain/glb
-          git add public/assets/environment/mountain/Mountain-Textures.zip
-          git commit -m "Convert mountain assets to GLB" || exit 0
+          git commit -m "Convert mountain assets to GLB"
           git push
           
