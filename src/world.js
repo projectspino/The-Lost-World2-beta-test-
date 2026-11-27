@@ -1,4 +1,6 @@
+
 import * as BABYLON from "@babylonjs/core";
+import "@babylonjs/loaders/glTF";
 import { createNPC } from "./characters/npc/npc-factory.js";
 
 export function buildWorld(
@@ -216,6 +218,39 @@ export function buildWorld(
       };
     }
   }
+
+  // =====================================
+  // MODEL POHON GLB - UJI INTEGRASI
+  // =====================================
+
+  const forestAssetUrl =
+    import.meta.env.BASE_URL + "assets/environment/forest/";
+
+  BABYLON.SceneLoader.ImportMeshAsync(
+    "",
+    forestAssetUrl,
+    "elder-canopy-tree.glb",
+    scene
+  ).then((result) => {
+    const modelRoot =
+      result.meshes.find(mesh => mesh.name === "__root__") ||
+      result.meshes[0];
+
+    if (!modelRoot) {
+      throw new Error("Model pohon tidak memiliki root mesh.");
+    }
+
+    modelRoot.position.set(78, 0, -18);
+
+    result.meshes.forEach(mesh => {
+      mesh.isPickable = false;
+      mesh.checkCollisions = false;
+    });
+
+    console.log("Model elder-canopy-tree.glb berhasil dimuat.");
+  }).catch((error) => {
+    console.error("Gagal memuat model pohon GLB:", error);
+  });
 
   // =====================================
   // RAWA BARAT
@@ -689,4 +724,5 @@ export function buildWorld(
       }
     });
   };
-    }
+}
+  
