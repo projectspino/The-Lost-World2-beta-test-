@@ -1,0 +1,93 @@
+
+name: Convert Mountain Assets to GLB
+
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+jobs:
+  convert:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install Blender
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y blender unzip
+
+      - name: Extract assets
+        run: |
+          cd public/assets/environment/mountain
+          cat Mountain-Textures.part01 Mountain-Textures.part02 > Mountain-Textures.zip
+          mkdir -p /tmp/mountain-fbx /tmp/mountain-textures
+          unzip -oq "Mountain (FBX).zip" -d /tmp/mountain-fbx
+          unzip -oq Mountain-Textures.zip -d /tmp/mountain-textures
+
+      - name: Create conversion script
+        run: |
+          cat > /tmp/convert.py <<'PY'
+          import bpy, os
+          from pathlib import Path
+
+          root = Path(os.environ["GITHUB_WORKSPACE"])
+          source = Path("/tmp/mountain-fbx")
+          textures = Path("/tmp/mountain-textures")
+          output = root / "public/assets/environment/mountain/glb"
+          output.mkdir(parents=True, exist_ok=True)
+
+          texture_map = {}
+          for p in textures.rglob("*"):
+              if p.is_file() and p.suffix.lower() in (".png", ".jpg", ".jpeg", ".tga"):
+                  texture_map.setdefault(p.name.lower(), p)
+
+          models = sorted(source.rglob("*.fbx"))
+          if not models:
+              raise RuntimeError("FBX models not found")
+
+          for model in models:
+              bpy.ops.wm.read_factory_settings(use_empty=True)
+              bpy.ops.import_scene.fbx(filepath=str(model), use_image_search=True)
+
+              for image in bpy.data.images:
+                  if image.source == "FILE":
+                      found = texture_map.get(Path(image.filepath).name.lower())
+                      if found:
+                          image.filepath = str(found)
+                          image.reload()
+                      try:
+                          image.pack()
+                      except Exception:
+                          pass
+
+              target = output / (model.stem + ".glb")
+              bpy.ops.export_scene.gltf(
+                  filepath=str(target),
+                  export_format="GLB",
+                  export_apply=True,
+                  export_image_format="AUTO"
+              )
+              print("EXPORTED:", target)
+
+          print("TOTAL MODEL:", len(models))
+          PY
+
+      - name: Convert FBX to GLB
+        run: |
+          export GITHUB_WORKSPACE="$PWD"
+          blender -b -t 2 --python /tmp/convert.py
+
+      - name: Save GLB files
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add public/assets/environment/mountain/glb
+          git add public/assets/environment/mountain/Mountain-Textures.zip
+          git commit -m "Convert mountain assets to GLB" || exit 0
+          git push
+          
