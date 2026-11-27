@@ -240,8 +240,8 @@ export function buildWorld(
       throw new Error("Model pohon tidak memiliki root mesh.");
     }
 
-    modelRoot.position.set(78, 0, -18);
-
+    modelRoot.position.set(5, 0, 0);
+    
     result.meshes.forEach(mesh => {
       mesh.isPickable = false;
       mesh.checkCollisions = false;
