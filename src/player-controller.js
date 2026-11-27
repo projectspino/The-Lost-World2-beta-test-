@@ -48,7 +48,7 @@ export function createPlayerController(
     );
 
     inputY = BABYLON.Scalar.Clamp(
-      dy / maxDistance,
+      -dy / maxDistance,
       -1,
       1
     );
@@ -233,4 +233,4 @@ export function createPlayerController(
     joystick.style.setProperty("--stick-x", "0px");
     joystick.style.setProperty("--stick-y", "0px");
   };
-                   }
+}
