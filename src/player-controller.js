@@ -27,17 +27,34 @@ export function createPlayerController(
     const centerX = rect.left + rect.width / 2;
     const centerY = rect.top + rect.height / 2;
 
+    const radius = Math.min(rect.width, rect.height) / 2;
+    const maxDistance = radius * 0.55;
+
+    let dx = event.clientX - centerX;
+    let dy = event.clientY - centerY;
+
+    const distance = Math.hypot(dx, dy);
+
+    if (distance > maxDistance) {
+      const scale = maxDistance / distance;
+      dx *= scale;
+      dy *= scale;
+    }
+
     inputX = BABYLON.Scalar.Clamp(
-      (event.clientX - centerX) / 40,
+      dx / maxDistance,
       -1,
       1
     );
 
     inputY = BABYLON.Scalar.Clamp(
-      (event.clientY - centerY) / 40,
+      dy / maxDistance,
       -1,
       1
     );
+
+    joystick.style.setProperty("--stick-x", `${dx}px`);
+    joystick.style.setProperty("--stick-y", `${dy}px`);
   }
 
   function handlePointerDown(event) {
@@ -66,6 +83,9 @@ export function createPlayerController(
     activePointer = null;
     inputX = 0;
     inputY = 0;
+
+    joystick.style.setProperty("--stick-x", "0px");
+    joystick.style.setProperty("--stick-y", "0px");
   }
 
   function handleJump() {
@@ -135,10 +155,8 @@ export function createPlayerController(
         collisionSystem &&
         collisionSystem.enabled
       ) {
-        // Gerakan diperiksa oleh sistem collision
         collisionSystem.movePlayer(displacement);
       } else {
-        // Gerakan normal dengan batas dunia
         const nextPosition = player.position.add(
           displacement
         );
@@ -164,10 +182,8 @@ export function createPlayerController(
       );
     }
 
-    // Sistem lompat dan gravitasi
     if (jumping) {
       verticalSpeed -= gravity * delta;
-
       player.position.y += verticalSpeed * delta;
 
       if (player.position.y <= 1) {
@@ -213,6 +229,8 @@ export function createPlayerController(
     inputX = 0;
     inputY = 0;
     activePointer = null;
+
+    joystick.style.setProperty("--stick-x", "0px");
+    joystick.style.setProperty("--stick-y", "0px");
   };
-}
-  
+                   }
