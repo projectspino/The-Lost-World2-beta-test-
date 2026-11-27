@@ -1,6 +1,8 @@
+
 import * as BABYLON from "@babylonjs/core";
 import "@babylonjs/loaders/glTF";
 import { createNPC } from "./characters/npc/npc-factory.js";
+import { createTreeSystem } from "./tree-system.js";
 
 export function buildWorld(
   scene,
@@ -46,6 +48,26 @@ export function buildWorld(
   );
   torchMaterial.diffuseColor = new BABYLON.Color3(1, 0.35, 0.05);
   torchMaterial.emissiveColor = new BABYLON.Color3(1, 0.18, 0.02);
+
+  // =====================================
+  // SISTEM POHON 3D
+  // =====================================
+
+  let treeSystem = null;
+  let worldDisposed = false;
+
+  createTreeSystem(
+    scene,
+    import.meta.env.BASE_URL
+  ).then(system => {
+    if (worldDisposed) {
+      system.dispose();
+    } else {
+      treeSystem = system;
+    }
+  }).catch(error => {
+    console.error("Gagal menyiapkan sistem pohon:", error);
+  });
 
   // =====================================
   // DUNIA UTAMA
@@ -170,87 +192,6 @@ export function buildWorld(
   }
 
   // =====================================
-  // HUTAN TIMUR
-  // =====================================
-
-  for (let i = 0; i < 115; i++) {
-    const x = 55 + Math.abs(Math.sin(i * 12.3)) * 135;
-    const z = Math.sin(i * 8.7) * 105;
-
-    if (Math.abs(z) < 7 && x < 125) continue;
-
-    const trunk = BABYLON.MeshBuilder.CreateCylinder(
-      "forest-trunk-" + i,
-      { height: 4, diameter: 0.8 },
-      scene
-    );
-
-    trunk.position.set(x, 2, z);
-    trunk.material = wood;
-
-    const crown = BABYLON.MeshBuilder.CreateSphere(
-      "forest-crown-" + i,
-      { diameter: 5, segments: 6 },
-      scene
-    );
-
-    crown.position.set(x, 5, z);
-    crown.material = leaves;
-
-    const tree = BABYLON.Mesh.MergeMeshes(
-      [trunk, crown],
-      true,
-      true,
-      undefined,
-      false,
-      true
-    );
-
-    if (tree) {
-      tree.name = "collectable-tree-forest-" + i;
-      tree.isPickable = true;
-      tree.metadata = {
-        collectable: true,
-        collected: false,
-        woodAmount: 3
-      };
-    }
-  }
-
-  // =====================================
-  // MODEL POHON GLB - UJI INTEGRASI
-  // =====================================
-
-  const forestAssetUrl =
-    import.meta.env.BASE_URL + "assets/environment/forest/";
-
-  BABYLON.SceneLoader.ImportMeshAsync(
-    "",
-    forestAssetUrl,
-    "elder-canopy-tree.glb",
-    scene
-  ).then((result) => {
-    const modelRoot =
-      result.meshes.find(mesh => mesh.name === "__root__") ||
-      result.meshes[0];
-
-    if (!modelRoot) {
-      throw new Error("Model pohon tidak memiliki root mesh.");
-    }
-
-    modelRoot.position.set(5, 0, 0);
-
-    result.meshes.forEach(mesh => {
-      mesh.isPickable = false;
-      mesh.checkCollisions = false;
-    });
-
-    console.log("Model elder-canopy-tree.glb berhasil dimuat.");
-  }).catch((error) => {
-    console.error("Gagal memuat model pohon GLB:", error);
-  });
-
-  // =====================================
   // RAWA BARAT
   // =====================================
 
@@ -310,54 +251,6 @@ export function buildWorld(
   }
 
   // =====================================
-  // HUTAN DAN POHON LAMA
-  // =====================================
-
-  for (let i = 0; i < 55; i++) {
-    const x = Math.sin(i * 12.3) * 65;
-    const z = Math.cos(i * 8.7) * 65;
-
-    if (Math.abs(x - 22) < 8) continue;
-
-    const trunk = BABYLON.MeshBuilder.CreateCylinder(
-      "tree-trunk-" + i,
-      { height: 3, diameter: 0.65 },
-      scene
-    );
-
-    trunk.position.set(x, 1.5, z);
-    trunk.material = wood;
-
-    const crown = BABYLON.MeshBuilder.CreateSphere(
-      "tree-crown-" + i,
-      { diameter: 4, segments: 6 },
-      scene
-    );
-
-    crown.position.set(x, 4, z);
-    crown.material = leaves;
-
-    const tree = BABYLON.Mesh.MergeMeshes(
-      [trunk, crown],
-      true,
-      true,
-      undefined,
-      false,
-      true
-    );
-
-    if (tree) {
-      tree.name = "collectable-tree-" + i;
-      tree.isPickable = true;
-      tree.metadata = {
-        collectable: true,
-        collected: false,
-        woodAmount: 2
-      };
-    }
-  }
-
-  // =====================================
   // RUMAH DESA
   // =====================================
 
@@ -391,7 +284,7 @@ export function buildWorld(
   }
 
   // =====================================
-  // NPC DESA - CHARACTER FACTORY
+  // NPC DESA
   // =====================================
 
   const npcData = [
@@ -669,11 +562,11 @@ export function buildWorld(
   }
 
   // =====================================
-  // INTERAKSI
+  // INTERAKSI DUNIA
   // =====================================
 
   const pointerObserver = scene.onPointerObservable.add(
-    (pointerInfo) => {
+    pointerInfo => {
       if (
         pointerInfo.type !== BABYLON.PointerEventTypes.POINTERDOWN
       ) {
@@ -695,24 +588,45 @@ export function buildWorld(
       if (!metadata) return;
 
       if (metadata.dungeonEntrance) {
-        onDungeonEnter(metadata.dungeonName || "Dungeon Kuno");
+        onDungeonEnter(
+          metadata.dungeonName || "Dungeon Kuno"
+        );
         return;
       }
 
       if (metadata.npc) {
-        onNpcTalk(metadata.npcName, metadata.dialogue);
+        onNpcTalk(
+          metadata.npcName,
+          metadata.dialogue
+        );
         return;
       }
 
       if (metadata.collectable && !metadata.collected) {
         metadata.collected = true;
+
         onWoodCollected(metadata.woodAmount);
-        selected.dispose();
+
+        if (
+          metadata.treeRoot &&
+          !metadata.treeRoot.isDisposed()
+        ) {
+          metadata.treeRoot.dispose(false, true);
+        } else {
+          selected.dispose();
+        }
       }
     }
   );
 
   return function disposeWorldInteraction() {
+    worldDisposed = true;
+
+    if (treeSystem) {
+      treeSystem.dispose();
+      treeSystem = null;
+    }
+
     scene.onPointerObservable.remove(pointerObserver);
 
     npcInstances.forEach(npc => {
@@ -722,3 +636,4 @@ export function buildWorld(
     });
   };
 }
+  
