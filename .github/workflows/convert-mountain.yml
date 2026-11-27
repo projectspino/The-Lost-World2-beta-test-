@@ -16,10 +16,10 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
-      - name: Install Blender
+      - name: Install Blender and NumPy
         run: |
           sudo apt-get update
-          sudo apt-get install -y blender unzip
+          sudo apt-get install -y blender unzip python3-numpy
 
       - name: Extract assets
         run: |
@@ -29,6 +29,10 @@ jobs:
           mkdir -p /tmp/mountain-fbx /tmp/mountain-textures
           unzip -oq "Mountain (FBX).zip" -d /tmp/mountain-fbx
           unzip -oq Mountain-Textures.zip -d /tmp/mountain-textures
+
+      - name: Verify Blender and NumPy
+        run: |
+          blender -b --python-expr "import numpy; print('NUMPY OK:', numpy.__version__)"
 
       - name: Create conversion script
         run: |
@@ -91,9 +95,14 @@ jobs:
 
       - name: Save GLB files
         run: |
+          set -e
           git config user.name "github-actions[bot]"
           git config user.email "41898282+users.noreply.github.com"
           git add public/assets/environment/mountain/glb
+          git diff --cached --quiet && {
+            echo "No new GLB files to save."
+            exit 1
+          }
           git commit -m "Convert mountain assets to GLB"
           git push
           
